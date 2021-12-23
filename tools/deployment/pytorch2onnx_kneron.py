@@ -119,8 +119,11 @@ def pytorch2onnx(config_path,
 
         mean = cfg.img_norm_cfg['mean']
         std = cfg.img_norm_cfg['std']
-        normalize_bn_bias = [ -1*mean[0]/std[0], -1*mean[1]/std[1], -1*mean[2]/std[2]]
+
+        # add 128 for changing input range from 0~255 to -128~127 (int8) due to quantization due to quantization limitation
+        normalize_bn_bias = [ -1*mean[0]/std[0] + 128.0/std[0], -1*mean[1]/std[1] + 128.0/std[1], -1*mean[2]/std[2] + 128.0/std[2]] 
         normalize_bn_scale = [1/std[0], 1/std[1], 1/std[2]]
+
         other.add_shift_scale_bn_after(m.graph, i_n.name, normalize_bn_bias, normalize_bn_scale)
     m = onnx.utils.polish_model(m)
 

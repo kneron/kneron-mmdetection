@@ -822,7 +822,7 @@ def main(args):
     image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
     image = cv2.resize(image , (640, 384), interpolation=cv2.INTER_LINEAR)
     image_show = cv2.cvtColor(image,cv2.COLOR_RGB2BGR)
-    image = image.astype(np.float32)
+    image = image.astype(np.float32) - 128 # subtract 128 to change input data range from 0~255 to -128~127
     image = image.transpose(2, 0, 1) # CHW
     img_data = [image[None]]
     #img_data = torch.from_numpy(image)[None] #NCHW
