@@ -110,6 +110,20 @@ def pytorch2onnx(config_path,
 
     m = onnx.load(output_file)
     m = torch_exported_onnx_flow(m, disable_fuse_bn = False)
+
+    # add BN for doing input data normalization
+    cfg = Config.fromfile(config_path)
+    for i_n in m.graph.input:
+        if i_n.type.tensor_type.shape.dim[1].dim_value != 3:
+            raise ValueError("Only support 3 channel input, found input node channel not equal to 3: node name... " + i_n.name)
+
+        mean = cfg.img_norm_cfg['mean']
+        std = cfg.img_norm_cfg['std']
+        normalize_bn_bias = [ -1*mean[0]/std[0], -1*mean[1]/std[1], -1*mean[2]/std[2]]
+        normalize_bn_scale = [1/std[0], 1/std[1], 1/std[2]]
+        other.add_shift_scale_bn_after(m.graph, i_n.name, normalize_bn_bias, normalize_bn_scale)
+    m = onnx.utils.polish_model(m)
+
     onnx_out = output_file[:-5] + '_kneron_optimized.onnx'
     onnx.save(m, onnx_out)
     print("exported success: ", onnx_out)

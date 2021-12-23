@@ -818,13 +818,11 @@ def main(args):
     img = args.input_img
 
     # ================= pre process start =================
-    mean_kneron = [0.5, 0.5, 0.5]
-    std_kneron = [1.0, 1.0, 1.0]
     image = cv2.imread(img)
     image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
     image = cv2.resize(image , (640, 384), interpolation=cv2.INTER_LINEAR)
     image_show = cv2.cvtColor(image,cv2.COLOR_RGB2BGR)
-    image = (((image / 256.0) - mean_kneron) / std_kneron).astype(np.float32)
+    image = image.astype(np.float32)
     image = image.transpose(2, 0, 1) # CHW
     img_data = [image[None]]
     #img_data = torch.from_numpy(image)[None] #NCHW
