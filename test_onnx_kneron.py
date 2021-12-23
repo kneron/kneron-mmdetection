@@ -1,4 +1,4 @@
-from mmdet.apis import init_detector, inference_detector, show_result_pyplot, inference_detector_preproc_test
+from mmdet.apis import init_detector, inference_detector, show_result_pyplot
 import onnxruntime
 import cv2
 import numpy as np
@@ -14,7 +14,7 @@ def parse_args():
         description='Convert MMDetection models to ONNX')
     parser.add_argument('--config-file', help='test config file path', default='./configs/yolof/yolof_r50_c5_8x8_1x_coco_kneron_norm_torch_nograd_noeval.py')
     parser.add_argument('--model-cfg', help='the model configuration dictionary', default='./model_config/yolof_model_cfg.json')
-    parser.add_argument('--onnx-file', help='onnx file', default='./checkpoints/onnx/yolof_test_0707_model_only_kneron_optimized.onnx')
+    parser.add_argument('--onnx-file', help='onnx file', default='./checkpoints/yolof_test_0707_model_only_kneron_optimized.onnx')
     parser.add_argument('--input-img', type=str, help='Images for input', default= './demo/sample.jpg')
     parser.add_argument('--output-img', type=str, help='Images for output', default= './demo/sample_onnx_yolof_0720.jpg')
     parser.add_argument(
