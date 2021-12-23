@@ -6,7 +6,7 @@ import numpy as np
 import onnx
 import onnxruntime as rt
 import torch
-from mmcv import DictAction
+from mmcv import DictAction, Config
 
 from mmdet.core.export import (build_model_from_cfg,
                                generate_inputs_and_wrap_model,
