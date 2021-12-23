@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from functools import partial
 
 import mmcv
@@ -9,7 +8,7 @@ from mmcv.runner import load_checkpoint
 
 def generate_inputs_and_wrap_model(config_path,
                                    checkpoint_path,
-                                   input_config,
+                                   input_config, model_only = False,
                                    cfg_options=None):
     """Prepare sample input and wrap model for ONNX export.
 
@@ -23,7 +22,7 @@ def generate_inputs_and_wrap_model(config_path,
     For example, the MMDet models' forward function has a parameter
     ``return_loss:bool``. As we want to set it as False while export API
     supports neither bool type or kwargs. So we have to replace the forward
-    method like ``model.forward = partial(model.forward, return_loss=False)``.
+    like: ``model.forward = partial(model.forward, return_loss=False)``
 
     Args:
         config_path (str): the OpenMMLab config for the model we want to
@@ -36,17 +35,20 @@ def generate_inputs_and_wrap_model(config_path,
             as there is no legal bbox.
 
     Returns:
-        tuple: (model, tensor_data) wrapped model which can be called by
-            ``model(*tensor_data)`` and a list of inputs which are used to
-            execute the model while exporting.
+        tuple: (model, tensor_data) wrapped model which can be called by \
+        model(*tensor_data) and a list of inputs which are used to execute \
+            the model while exporting.
     """
 
     model = build_model_from_cfg(
         config_path, checkpoint_path, cfg_options=cfg_options)
     one_img, one_meta = preprocess_example_input(input_config)
     tensor_data = [one_img]
+
+    #print(model)
+    #exit(0)
     model.forward = partial(
-        model.forward, img_metas=[[one_meta]], return_loss=False)
+        model.forward, img_metas=[[one_meta]], return_loss=False, model_only= model_only)
 
     # pytorch has some bug in pytorch1.3, we have to fix it
     # by replacing these existing op
@@ -78,6 +80,10 @@ def build_model_from_cfg(config_path, checkpoint_path, cfg_options=None):
     cfg = mmcv.Config.fromfile(config_path)
     if cfg_options is not None:
         cfg.merge_from_dict(cfg_options)
+    # import modules from string list.
+    if cfg.get('custom_imports', None):
+        from mmcv.utils import import_modules_from_strings
+        import_modules_from_strings(**cfg['custom_imports'])
     # set cudnn_benchmark
     if cfg.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
@@ -87,14 +93,7 @@ def build_model_from_cfg(config_path, checkpoint_path, cfg_options=None):
     # build the model
     cfg.model.train_cfg = None
     model = build_detector(cfg.model, test_cfg=cfg.get('test_cfg'))
-    checkpoint = load_checkpoint(model, checkpoint_path, map_location='cpu')
-    if 'CLASSES' in checkpoint.get('meta', {}):
-        model.CLASSES = checkpoint['meta']['CLASSES']
-    else:
-        from mmdet.datasets import DATASETS
-        dataset = DATASETS.get(cfg.data.test['type'])
-        assert (dataset is not None)
-        model.CLASSES = dataset.CLASSES
+    load_checkpoint(model, checkpoint_path, map_location='cpu')
     model.cpu().eval()
     return model
 
@@ -150,10 +149,10 @@ def preprocess_example_input(input_config):
         'ori_shape': (H, W, C),
         'pad_shape': (H, W, C),
         'filename': '<demo>.png',
-        'scale_factor': np.ones(4, dtype=np.float32),
+        'scale_factor': np.ones(4),
         'flip': False,
         'show_img': show_img,
-        'flip_direction': None
     }
-
+    #print(one_meta)
+    #exit(0)
     return one_img, one_meta
