@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import torch
 import torch.nn as nn
 from mmcv.cnn import (ConvModule, bias_init_with_prob, constant_init, is_norm,
@@ -87,19 +88,19 @@ class YOLOFHead(AnchorHead):
         self.bbox_subnet = nn.Sequential(*bbox_subnet)
         self.cls_score = nn.Conv2d(
             self.in_channels,
-            self.num_anchors * self.num_classes,
+            self.num_base_priors * self.num_classes,
             kernel_size=3,
             stride=1,
             padding=1)
         self.bbox_pred = nn.Conv2d(
             self.in_channels,
-            self.num_anchors * 4,
+            self.num_base_priors * 4,
             kernel_size=3,
             stride=1,
             padding=1)
         self.object_pred = nn.Conv2d(
             self.in_channels,
-            self.num_anchors,
+            self.num_base_priors,
             kernel_size=3,
             stride=1,
             padding=1)
@@ -116,12 +117,10 @@ class YOLOFHead(AnchorHead):
         torch.nn.init.constant_(self.cls_score.bias, bias_cls)
 
     def forward_single(self, feature):
-        #print("yolofhead, forward_single")
         cls_score = self.cls_score(self.cls_subnet(feature))
         N, _, H, W = cls_score.shape
         cls_score = cls_score.view(N, -1, self.num_classes, H, W)
 
-        #print("cls_score: ", cls_score)
         reg_feat = self.bbox_subnet(feature)
         bbox_reg = self.bbox_pred(reg_feat)
         objectness = self.object_pred(reg_feat)
@@ -132,35 +131,7 @@ class YOLOFHead(AnchorHead):
             1. + torch.clamp(cls_score.exp(), max=INF) +
             torch.clamp(objectness.exp(), max=INF))
         normalized_cls_score = normalized_cls_score.view(N, -1, H, W)
-        #print("normalized_cls_score: ", normalized_cls_score[0,:,0,0])
         return normalized_cls_score, bbox_reg
-
-    def forward_single_model_only(self, feature):
-        print("yolofhead, forward_single_model_only")
-        cls_score = self.cls_score(self.cls_subnet(feature))
-        #N, _, H, W = cls_score.shape
-        #print("cls_score_original.shape: ", cls_score.shape) #torch.Size([1, 400, 12, 20]), reduced by 32x
-        ##cls_score = cls_score.view(N, -1, self.num_classes, H, W)
-
-        reg_feat = self.bbox_subnet(feature)
-        bbox_reg = self.bbox_pred(reg_feat)
-        objectness = self.object_pred(reg_feat)
-        #print("cls_score.shape: ", cls_score.shape) #torch.Size([1, 5, 80, 12, 20])
-        #print("bbox_reg.shape: ", bbox_reg.shape) #torch.Size([1, 20, 12, 20])
-        #print("objectness_original.shape: ", objectness.shape) #torch.Size([1, 5, 12, 20])
-
-        # implicit objectness
-        ##objectness = objectness.view(N, -1, 1, H, W)
-        #print("objectness.shape: ", objectness.shape)  #torch.Size([1, 5, 1, 12, 20])
-        #exit(0)
-        '''
-        normalized_cls_score = cls_score + objectness - torch.log(
-            1. + torch.clamp(cls_score.exp(), max=INF) +
-            torch.clamp(objectness.exp(), max=INF))
-        normalized_cls_score = normalized_cls_score.view(N, -1, H, W)
-        '''
-        return cls_score, objectness, bbox_reg
-
 
     @force_fp32(apply_to=('cls_scores', 'bbox_preds'))
     def loss(self,
@@ -189,7 +160,7 @@ class YOLOFHead(AnchorHead):
             dict[str, Tensor]: A dictionary of loss components.
         """
         assert len(cls_scores) == 1
-        assert self.anchor_generator.num_levels == 1
+        assert self.prior_generator.num_levels == 1
 
         device = cls_scores[0].device
         featmap_sizes = [featmap.size()[-2:] for featmap in cls_scores]
