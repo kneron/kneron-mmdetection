@@ -833,25 +833,7 @@ def main(args):
 
     # ================= post process start =================
     num_classes = 80
-    cls_score, objectness, bbox_reg = inf_results
-    #print(cls_score.shape) #(1, 400, 12, 20)
-    #print(objectness.shape) #(1, 5, 12, 20)
-    #print(bbox_reg.shape) #(1, 20, 12, 20)
-    batch, _, feature_h, feature_w = cls_score.shape
-    cls_score = cls_score.reshape(batch, -1, num_classes, feature_h, feature_w)
-
-    #print("cls_score_test_onnx: ", cls_score)
-    #exit(0)
-    objectness = objectness.reshape(batch, -1, 1, feature_h, feature_w)
-    #print(cls_score.shape) # 1, 5, 80, 12, 20)
-    #print(objectness.shape) #(1, 5, 1, 12, 20)
-    INF = 1e8
-    normalized_cls_score = cls_score + objectness - np.log(
-        1. + np.clip(np.exp(cls_score), a_min=0, a_max=INF) +
-        np.clip(np.exp(objectness), a_min=0, a_max=INF))
-
-
-    normalized_cls_score = normalized_cls_score.reshape(batch, -1, feature_h, feature_w)
+    normalized_cls_score, bbox_reg = inf_results
 
     input_shape = (args.shape[0], args.shape[1], 3)
     results = get_bboxes( cls_scores = normalized_cls_score, bbox_preds= bbox_reg, input_shape = input_shape, anchor_generator = yolof_anchor_generator_infile)
@@ -860,6 +842,7 @@ def main(args):
     for box_prob in results:
         # xywh
         drawbbox(image_show, box_prob)
+    print("save result to " + args.output_img)
     cv2.imwrite(args.output_img, image_show)
 
 
