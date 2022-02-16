@@ -897,7 +897,149 @@ class RandomCrop:
         repr_str += f'bbox_clip_border={self.bbox_clip_border})'
         return repr_str
 
+@PIPELINES.register_module()
+class Rotate90:
+    """Random crop the image & bboxes & masks.
 
+    The absolute `crop_size` is sampled based on `crop_type` and `image_size`,
+    then the cropped results are generated.
+
+    Args:
+        crop_size (tuple): The relative ratio or absolute pixels of
+            height and width.
+        crop_type (str, optional): one of "relative_range", "relative",
+            "absolute", "absolute_range". "relative" randomly crops
+            (h * crop_size[0], w * crop_size[1]) part from an input of size
+            (h, w). "relative_range" uniformly samples relative crop size from
+            range [crop_size[0], 1] and [crop_size[1], 1] for height and width
+            respectively. "absolute" crops from an input with absolute size
+            (crop_size[0], crop_size[1]). "absolute_range" uniformly samples
+            crop_h in range [crop_size[0], min(h, crop_size[1])] and crop_w
+            in range [crop_size[0], min(w, crop_size[1])]. Default "absolute".
+        allow_negative_crop (bool, optional): Whether to allow a crop that does
+            not contain any bbox area. Default False.
+        recompute_bbox (bool, optional): Whether to re-compute the boxes based
+            on cropped instance masks. Default False.
+        bbox_clip_border (bool, optional): Whether clip the objects outside
+            the border of the image. Defaults to True.
+
+    Note:
+        - If the image is smaller than the absolute crop size, return the
+            original image.
+        - The keys for bboxes, labels and masks must be aligned. That is,
+          `gt_bboxes` corresponds to `gt_labels` and `gt_masks`, and
+          `gt_bboxes_ignore` corresponds to `gt_labels_ignore` and
+          `gt_masks_ignore`.
+        - If the crop does not contain any gt-bbox region and
+          `allow_negative_crop` is set to False, skip this image.
+    """
+
+    def __init__(self,
+                 angle,
+                 recompute_bbox=False,
+                 bbox_clip_border=True):
+
+        self.angle = angle
+        self.bbox_clip_border = bbox_clip_border
+        self.recompute_bbox = recompute_bbox
+        # The key correspondence from bboxes to labels and masks.
+        self.bbox2label = {
+            'gt_bboxes': 'gt_labels',
+            'gt_bboxes_ignore': 'gt_labels_ignore'
+        }
+        self.bbox2mask = {
+            'gt_bboxes': 'gt_masks',
+            'gt_bboxes_ignore': 'gt_masks_ignore'
+        }
+
+    def _rotate_data(self, results, angle):
+        for key in results.get('img_fields', ['img']):
+            img = results[key]
+            img_height, img_width = img.shape[0], img.shape[1]
+
+            # Compute the rotation matrix.
+            M = cv2.getRotationMatrix2D(center=(img_width / 2, img_height / 2),
+                                        angle=angle,
+                                        scale=1)
+
+            # Get the sine and cosine from the rotation matrix.
+            cos_angle = np.abs(M[0, 0])
+            sin_angle = np.abs(M[0, 1])
+
+            # Compute the new bounding dimensions of the image.
+            img_width_new = int(img_height * sin_angle + img_width * cos_angle)
+            img_height_new = int(img_height * cos_angle + img_width * sin_angle)
+
+            # Adjust the rotation matrix to take into account the translation.
+            M[1, 2] += (img_height_new - img_height) / 2
+            M[0, 2] += (img_width_new - img_width) / 2
+
+            # Rotate the image.
+            img = cv2.warpAffine(img,
+                                M=M,
+                                dsize=(img_width_new, img_height_new))        
+            img_shape = img.shape
+            results[key] = img
+        results['img_shape'] = img_shape
+ 
+        # crop bboxes accordingly and clip to the image boundary
+        for key in results.get('bbox_fields', []):
+            labels = results[key] 
+            
+            xmin = 0#self.labels_format['xmin']
+            ymin = 1#self.labels_format['ymin']
+            xmax = 2#self.labels_format['xmax']
+            ymax = 3#self.labels_format['ymax']
+
+            labels = np.copy(labels)
+            # Rotate the bounding boxes accordingly.
+            # Transform two opposite corner points of the rectangular boxes using the rotation matrix `M`.
+            toplefts = np.array([labels[:,xmin], labels[:,ymin], np.ones(labels.shape[0])])
+            bottomrights = np.array([labels[:,xmax], labels[:,ymax], np.ones(labels.shape[0])])
+            new_toplefts = (np.dot(M, toplefts)).T
+            new_bottomrights = (np.dot(M, bottomrights)).T
+            labels[:,[xmin,ymin]] = np.round(new_toplefts, decimals=0).astype(np.int)
+            labels[:,[xmax,ymax]] = np.round(new_bottomrights, decimals=0).astype(np.int)
+
+            if self.angle == 90:
+                # ymin and ymax were switched by the rotation.
+                labels[:,[ymax,ymin]] = labels[:,[ymin,ymax]]
+            elif self.angle == 180:
+                # ymin and ymax were switched by the rotation,
+                # and also xmin and xmax were switched.
+                labels[:,[ymax,ymin]] = labels[:,[ymin,ymax]]
+                labels[:,[xmax,xmin]] = labels[:,[xmin,xmax]]
+            elif self.angle == 270:
+                # xmin and xmax were switched by the rotation.
+                labels[:,[xmax,xmin]] = labels[:,[xmin,xmax]]
+                
+            results[key] = labels
+
+        return results
+
+
+
+    def __call__(self, results):
+        """Call function to randomly crop images, bounding boxes, masks,
+        semantic segmentation maps.
+
+        Args:
+            results (dict): Result dict from loading pipeline.
+
+        Returns:
+            dict: Randomly cropped results, 'img_shape' key in result dict is
+                updated according to crop size.
+        """
+
+
+        results = self._rotate_data(results, self.angle)
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        repr_str += f'(angle={self.angle}, '
+        return repr_str
+    
 @PIPELINES.register_module()
 class SegRescale:
     """Rescale semantic segmentation maps.
