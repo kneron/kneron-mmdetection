@@ -14,23 +14,18 @@ In this report, we present some experienced improvements to YOLO series, forming
 
 
 #### Train
-This script.
 ```shell
 python tools/train.py \
     configs/yolox/yolox_s_8x8_300e_coco_img_norm.py
 ```
 
 #### Test
-This script.
-
 ```shell
 python tools/test.py \
     configs/yolox/yolox_s_8x8_300e_coco_img_norm.py
 ```
 
 #### Export onnx
-This script.
-
 ```shell
 python tools/deployment/pytorch2onnx.py \
     configs/yolox/yolox_s_8x8_300e_coco_img_norm.py \
