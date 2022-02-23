@@ -25,6 +25,15 @@ python tools/test.py \
     configs/yolox/yolox_s_8x8_300e_coco_img_norm.py
 ```
 
+#### Test_kneron
+```shell
+python tools/test_kneron.py \
+    configs/yolox/yolox_s_8x8_300e_coco_img_norm.py \
+    work_dirs/yolox_s_8x8_300e_coco_img_norm/best_bbox_mAP_epoch_298.pth \
+    --eval bbox \
+    --out-kneron output.json
+```
+
 #### Export onnx
 ```shell
 python tools/deployment/pytorch2onnx.py \
