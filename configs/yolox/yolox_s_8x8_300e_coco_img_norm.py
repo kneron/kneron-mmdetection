@@ -96,8 +96,8 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=8,
-    workers_per_gpu=4,
+    samples_per_gpu=48,
+    workers_per_gpu=12,
     persistent_workers=True,
     train=train_dataset,
     val=dict(
@@ -120,8 +120,8 @@ optimizer = dict(
     weight_decay=5e-4,
     nesterov=True,
     paramwise_cfg=dict(norm_decay_mult=0., bias_decay_mult=0.))
-optimizer_config = dict(grad_clip=None)
-
+# optimizer_config = dict(grad_clip=None)
+optimizer_config = dict(_delete_=True,grad_clip=dict(max_norm=35, norm_type=2))
 max_epochs = 300
 num_last_epochs = 15
 resume_from = None
