@@ -61,6 +61,5 @@ We appreciate all contributions to improve [OpenMMLab-mmdetection](https://githu
 
 - For issues regarding to this repository [kneron-mmdetection](https://github.com/kneron/kneron-mmdetection): Welcome to leave the comment or submit pull requests here to improve kneron-mmdetection
 
-
 ## Related Projects
 - kneron-mmsegmentation: Kneron training/deployment platform on [OpenMMLab - mmSegmentation](https://github.com/open-mmlab/kneron-mmsegmentation) semantic segmentation toolbox
