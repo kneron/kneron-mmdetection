@@ -45,7 +45,7 @@ N/A
 ## Getting Started
 ---
 ### Tutorial - Kneron Edition
-- [YOLOX: Step-By-Step](docs_kneron/yolox-step-by-step.md): A tutorial for users to get started easily. To see detailed documents, please see below.
+- [YOLOX: Step-By-Step](docs_kneron/yolox_step_by_step.md): A tutorial for users to get started easily. To see detailed documents, please see below.
 
 ### Documents - Kneron Edition
 - [Kneron ONNX Export](link/to/pytorch2onnx_kneron/doc.md)
