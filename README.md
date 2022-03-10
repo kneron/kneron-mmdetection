@@ -45,12 +45,12 @@ N/A
 ## Getting Started
 ---
 ### Tutorial - Kneron Edition
-- [YOLOX: Step-By-Step](link/to/yolox-step-by-step.md): A tutorial for users to get started easily. To see detailed documents, please see below.
+- [YOLOX: Step-By-Step](docs_kneron/yolox-step-by-step.md): A tutorial for users to get started easily. To see detailed documents, please see below.
 
 ### Documents - Kneron Edition
 - [Kneron ONNX Export](link/to/pytorch2onnx_kneron/doc.md)
 - [Kneron Inference](link/to/inference_kneron/doc.md)
-- [Kneron toolchain step-by-step (YOLOv3)](http://doc.kneron.com/docs/#toolchain/manual/#0-overview)
+- [Kneron toolchain step-by-step (YOLOv3)](http://doc.kneron.com/docs/#toolchain/yolo_example/)
 - [Kneron toolchain manual](http://doc.kneron.com/docs/#toolchain/manual/#0-overview)
 
 ### Original MMDetection Documents
