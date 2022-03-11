@@ -104,7 +104,8 @@ cd ..
 * (Note 3) this is a "from scratch training" tutorial, and might need lot's of time and gpu resource. If you want to train a model to detect specific object, recommend you can read the [finetune.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/finetune.md) and [customize_dataset.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/customize_dataset.md)
 
 # Step 2: Test trained model
-'tools/test_kneron.py' is a script to help user to convert our test pth model:
+'tools/test_kneron.py' is a script which generates inference result and (if `--eval` given) evaluate the results to see if our pytorch model is well trained. It's always good to evluate our pytorch model before deploying it.
+
 ```python
 python tools/test_kneron.py \
     configs/yolox/yolox_s_8x8_300e_coco_img_norm.py \
@@ -114,6 +115,26 @@ python tools/test_kneron.py \
 ```
 * 'configs/yolox/yolox_s_8x8_300e_coco_img_norm.py' is your yolox training config
 * 'work_dirs/latest.pth' is your trained yolox model
+
+The expected result of the command above will be something similar to the following text (the numbers may slightly differ):
+```
+...
+Average Precision (AP) @[ IoU=0.50:0.95 | area= all | maxDets=100 ] = 0.379
+Average Precision (AP) @[ IoU=0.50 | area= all | maxDets=1000 ] = 0.564
+Average Precision (AP) @[ IoU=0.75 | area= all | maxDets=1000 ] = 0.410
+Average Precision (AP) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.205
+Average Precision (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.416
+Average Precision (AP) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.503
+Average Recall (AR) @[ IoU=0.50:0.95 | area= all | maxDets=100 ] = 0.530
+Average Recall (AR) @[ IoU=0.50:0.95 | area= all | maxDets=300 ] = 0.531
+Average Recall (AR) @[ IoU=0.50:0.95 | area= all | maxDets=1000 ] = 0.531
+Average Recall (AR) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.317
+Average Recall (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.582
+Average Recall (AR) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.678
+
+OrderedDict([('bbox_mAP', 0.379), ('bbox_mAP_50', 0.564), ('bbox_mAP_75', 0.41), ('bbox_mAP_s', 0.205), ('bbox_mAP_m', 0.416), ('bbox_mAP_l', 0.503), ('bbox_mAP_copypaste', '0.379 0.564 0.410 0.205 0.416 0.503')])
+...
+```
 
 # Step 3: Export onnx
 'tools/deployment/pytorch2onnx.py' is a script provided by MMDetection to help user to convert our trained pth model to onnx:
@@ -128,7 +149,7 @@ python tools/deployment/pytorch2onnx.py \
 * 'configs/yolox/yolox_s_8x8_300e_coco_img_norm.py' is your yolox training config
 * 'work_dirs/latest.pth' is your trained yolox model
 
-the output onnx should be the same name as 'work_dirs/latest.pth' with '.onnx' post-fix in the same folder.
+The output onnx should be the same name as 'work_dirs/latest.pth' with '.onnx' post-fix in the same folder.
 
 
 # Step 4: Convert onnx to [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model for Kneron platform
