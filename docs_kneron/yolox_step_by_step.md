@@ -113,8 +113,8 @@ python tools/test_kneron.py \
     --eval bbox \
     --out-kneron output.json
 ```
-* 'configs/yolox/yolox_s_8x8_300e_coco_img_norm.py' is your yolox training config
-* 'work_dirs/latest.pth' is your trained yolox model
+* `configs/yolox/yolox_s_8x8_300e_coco_img_norm.py` is your yolox training config
+* `work_dirs/latest.pth` is your trained yolox model
 
 The expected result of the command above will be something similar to the following text (the numbers may slightly differ):
 ```
