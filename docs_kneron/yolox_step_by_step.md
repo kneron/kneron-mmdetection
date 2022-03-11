@@ -101,7 +101,7 @@ wget https://github.com/kneron/Model_Zoo/raw/main/mmdetection/yolox_s/latest.zip
 unzip latest.zip
 cd ..
 ```
-* (Note 3) this is a "from scratch training" tutorial, and might need lot's of time and gpu resource. If you want to train a model to detect specific object, recommend you can read the [finetune.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/finetune.md) and [customize_dataset.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/customize_dataset.md)
+* (Note 3) this is a "from scratch training" tutorial, and might need lot's of time and gpu resource. If you want to train a model to detect specific object, recommend you can read the [finetune.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/finetune.md) and [customize_dataset.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/customize_dataset.md) and [colab tutorial: Train A Detector on A Customized Dataset](https://github.com/open-mmlab/mmdetection/blob/master/demo/MMDet_Tutorial.ipynb)
 
 # Step 2: Test trained model
 'tools/test_kneron.py' is a script to help user to convert our test pth model:
