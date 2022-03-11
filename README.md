@@ -50,8 +50,8 @@ N/A
 - [YOLOX: Step-By-Step](docs_kneron/yolox_step_by_step.md): A tutorial for users to get started easily. To see detailed documents, please see below.
 
 ### Documents - Kneron Edition
-- [Kneron ONNX Export](link/to/pytorch2onnx_kneron/doc.md)
-- [Kneron Inference](link/to/inference_kneron/doc.md)
+- [Kneron ONNX Export] (under development)
+- [Kneron Inference] (under development)
 - [Kneron toolchain step-by-step (YOLOv3)](http://doc.kneron.com/docs/#toolchain/yolo_example/)
 - [Kneron toolchain manual](http://doc.kneron.com/docs/#toolchain/manual/#0-overview)
 
