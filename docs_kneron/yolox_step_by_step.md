@@ -29,11 +29,11 @@ If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
 
     See [here](https://github.com/open-mmlab/mmcv#install-with-pip) for different versions of MMCV compatible to different PyTorch and CUDA versions.
 
-2. Download the MMDetection repository.
+2. Clone the Kneron version mmDetection repository.
 
-    We currently put our version mmdetection in Kneron toolchain docker, see our [document](http://doc.kneron.com/docs/#toolchain/manual/#1-installation) to pull toolchain docker image, and the mmdetection will be under the path in docker image: 
-    ```
-     /workspace/ai_training/mmdetection
+    ```bash
+    git clone https://github.com/kneron/AI_Training_mmDetection.git
+    cd AI_Training_mmDetection
     ```
 
 3. Install build requirements and then install MMDetection.
