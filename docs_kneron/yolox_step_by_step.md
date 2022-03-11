@@ -43,20 +43,21 @@ If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
     pip install -v -e .  # or "python setup.py develop"
     ```
 
-# Step 1: Training with existing models and standard datasets 
+# Step 1: Training models on standard datasets 
 
 MMDetection provides hundreds of existing and existing detection models in [Model Zoo](https://mmdetection.readthedocs.io/en/latest/model_zoo.html)), and supports multiple standard datasets, including Pascal VOC, COCO, CityScapes, LVIS, etc. This note will show how to perform common tasks on these existing models and standard datasets, including:
 
 - Use existing models to inference on given images.
 - Test existing models on standard datasets.
-- Train predefined models on standard datasets.
+- Train models on standard datasets.
 
-## Train predefined models on standard datasets
+## Train models on standard datasets
 
 MMDetection also provides out-of-the-box tools for training detection models.
-This section will show how to train _predefined_ models (under [configs](https://github.com/open-mmlab/mmdetection/tree/master/configs)) on standard datasets i.e. COCO.
+This section will show how to train models (under [configs](https://github.com/open-mmlab/mmdetection/tree/master/configs)) on standard datasets i.e. COCO.
 
-**Important**: The default learning rate in config files is for 8 GPUs and 2 img/gpu (batch size = 8\*2 = 16).
+**Important**: You might need to modify the [config](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/config.md) according your GPUs resource (such as "samples_per_gpu","workers_per_gpu" ...etc due to your GPUs RAM limitation).
+The default learning rate in config files is for 8 GPUs and 2 img/gpu (batch size = 8\*2 = 16).
 According to the [linear scaling rule](https://arxiv.org/abs/1706.02677), you need to set the learning rate proportional to the batch size if you use different GPUs or images per GPU, e.g., `lr=0.01` for 4 GPUs \* 2 imgs/gpu and `lr=0.08` for 16 GPUs \* 4 imgs/gpu.
 
 ### Step 1-1: Prepare datasets
@@ -92,18 +93,27 @@ The training of YOLOX is only need to use the configuration file (The configurat
 python tools/train.py /configs/yolox/yolox_s_8x8_300e_coco_img_norm.py
 ```
 * (Note) you might need to create a folder name 'work_dir' in MMDetection root folder because we set 'work_dir' as default folder in 'yolox_s_8x8_300e_coco_img_norm.py'
+* (Note 2) the whole training process takes very long time, if you just want to have a quick look the all flow, we recommend you can download our trained model and skip this process
+```bash
+mkdir work_dirs
+cd work_dirs
+wget https://github.com/kneron/Model_Zoo/raw/main/mmdetection/yolox_s/latest.zip
+unzip latest.zip
+cd ..
+```
+* (Note 3) this is a "from scratch training" tutorial, and might need lot's of time and gpu resource. If you want to train a model to detect specific object, recommend you can read the [finetune.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/finetune.md) and [customize_dataset.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/customize_dataset.md)
 
 # Step 2: Test trained model
 'tools/test_kneron.py' is a script to help user to convert our test pth model:
 ```python
 python tools/test_kneron.py \
     configs/yolox/yolox_s_8x8_300e_coco_img_norm.py \
-    work_dirs/yolox_s_8x8_300e_coco_img_norm/latest.pth \
+    work_dirs/latest.pth \
     --eval bbox \
     --out-kneron output.json
 ```
 * 'configs/yolox/yolox_s_8x8_300e_coco_img_norm.py' is your yolox training config
-* 'work_dirs/yolox_s_8x8_300e_coco_img_norm/latest.pth' is your trained yolox model
+* 'work_dirs/latest.pth' is your trained yolox model
 
 # Step 3: Export onnx
 'tools/deployment/pytorch2onnx.py' is a script provided by MMDetection to help user to convert our trained pth model to onnx:
@@ -111,14 +121,14 @@ python tools/test_kneron.py \
 python tools/deployment/pytorch2onnx.py \
     configs/yolox/yolox_s_8x8_300e_coco_img_norm.py \
     work_dirs/yolox_s_8x8_300e_coco_img_norm/latest.pth \
-    --output-file work_dirs/yolox_s_8x8_300e_coco_img_norm/latest.onnx \
+    --output-file work_dirs/latest.onnx \
     --skip-postprocess \
     --shape 640 640
 ```
 * 'configs/yolox/yolox_s_8x8_300e_coco_img_norm.py' is your yolox training config
-* 'work_dirs/yolox_s_8x8_300e_coco_img_norm/latest.pth' is your trained yolox model
+* 'work_dirs/latest.pth' is your trained yolox model
 
-the output onnx should be the same name as 'work_dirs/yolox_s_8x8_300e_coco_img_norm/latest.pth' with '.onnx' post-fix in the same folder.
+the output onnx should be the same name as 'work_dirs/latest.pth' with '.onnx' post-fix in the same folder.
 
 
 # Step 4: Convert onnx to [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model for Kneron platform
@@ -159,13 +169,18 @@ print("\nNpu performance evaluation result:\n" + str(eval_result))
 ```
 
 ### Step 4-6: quantize the onnx model
-We use coco128 dataset as quantization data, and do some preprocess(should be the same as training code) on our quantization data, and put it in a list:
+We use [random picked voc dataset](https://www.kneron.com/forum/uploads/112/SMZ3HLBK3DXJ.7z) (50 images) as quantization data , we have to
+1. download the data 
+2. uncompression the data as folder named "voc_data50" 
+3. put the "voc_data50" into docker mounted folder (in docker, the path looks like "/data1/voc_data50")
+
+the following script will do some preprocess(should be the same as training code) on our quantization data, and put it in a list:
 ```python
 import os
 from os import walk
 
 img_list = []
-for (dirpath, dirnames, filenames) in walk("/data1/coco128"):
+for (dirpath, dirnames, filenames) in walk("/data1/voc_data50"):
     for f in filenames:
         fullpath = os.path.join(dirpath, f)
         
