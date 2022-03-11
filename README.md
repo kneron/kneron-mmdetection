@@ -33,9 +33,11 @@ This project is released under the [Apache 2.0 license](LICENSE).
 ---
 N/A
 
-## Overview of Benchmark and Model Zoo
+## Overview of Benchmark and Kneron Model Zoo
 ---
-N/A
+| Backbone  | size   | Mem (GB) |   box AP | Config | Download |
+|:---------:|:-------:|:-------:|:-------:|:--------:|:------:|
+| YOLOX-s | 640 |   7.6      |   40.5  | [config](https://github.com/open-mmlab/mmdetection/tree/master/configs/yolox/yolox_s_8x8_300e_coco.py)       |[model](https://github.com/kneron/Model_Zoo/blob/main/mmdetection/yolox_s/latest.zip)
 
 ## Installation
 ---
