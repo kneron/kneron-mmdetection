@@ -104,7 +104,7 @@ cd ..
 * (Note 3) this is a "from scratch training" tutorial, and might need lot's of time and gpu resource. If you want to train a model to detect specific object, recommend you can read the [finetune.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/finetune.md) and [customize_dataset.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/customize_dataset.md)
 
 # Step 2: Test trained model
-'tools/test_kneron.py' is a script which generates inference result and (if `--eval` given) evaluate the results to see if our pytorch model is well trained. It's always good to evluate our pytorch model before deploying it.
+'tools/test_kneron.py' is a script which generates inference results from test set with our pytorch model and evaluates the results to see if our pytorch model is well trained if `--eval` argument given. Note that it's always good to evluate our pytorch model before deploying it.
 
 ```python
 python tools/test_kneron.py \
