@@ -6,7 +6,7 @@
 - Python 3.6+
 - PyTorch 1.3+
 - CUDA 9.2+ (If you build PyTorch from source, CUDA 9.0 is also compatible)
-- GCC 5+
+- (Optional) GCC 5+ 
 - [MMCV](https://mmcv.readthedocs.io/en/latest/#installation)
 
 **Note:** You need to run `pip uninstall mmcv` first if you have mmcv installed.
@@ -58,7 +58,6 @@ This section will show how to train models (under [configs](https://github.com/o
 
 **Important**: You might need to modify the [config](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/config.md) according your GPUs resource (such as "samples_per_gpu","workers_per_gpu" ...etc due to your GPUs RAM limitation).
 The default learning rate in config files is for 8 GPUs and 2 img/gpu (batch size = 8\*2 = 16).
-According to the [linear scaling rule](https://arxiv.org/abs/1706.02677), you need to set the learning rate proportional to the batch size if you use different GPUs or images per GPU, e.g., `lr=0.01` for 4 GPUs \* 2 imgs/gpu and `lr=0.08` for 16 GPUs \* 4 imgs/gpu.
 
 ### Step 1-1: Prepare datasets
 
