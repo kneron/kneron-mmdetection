@@ -51,7 +51,8 @@ def pytorch2onnx(model,
                  test_img=None,
                  do_simplify=False,
                  dynamic_export=None,
-                 skip_postprocess=False):
+                 skip_postprocess=False,
+                 in_model_preprocess=False):
 
     input_config = {
         'input_shape': input_shape,
@@ -80,10 +81,7 @@ def pytorch2onnx(model,
         print(f'Successfully exported ONNX model without '
               f'post process: {output_file}')
 
-        #####  add BN for doing input data normalization  #####
-        print("#####  add BN for doing input data normalization  #####")
         import onnxsim
-
         from mmdet import digit_version
 
         min_required_version = '0.3.0'
@@ -107,25 +105,29 @@ def pytorch2onnx(model,
         print(len(m.graph.input))
         m = torch_exported_onnx_flow(m, disable_fuse_bn = False)
         
-
         if len(m.graph.input) > 1:
             raise ValueError(" '--pixel-bias-value' and '--pixel-scale-value' only support one input node model currently")
 
-        mean = normalize_cfg['mean']
-        std = normalize_cfg['std']
+        if in_model_preprocess is True:
+            #####  add BN for doing input data normalization  #####
+            print("#####  add BN for doing input data normalization  #####")
 
-        i_n = m.graph.input[0]
-        if i_n.type.tensor_type.shape.dim[1].dim_value != len(mean) or  i_n.type.tensor_type.shape.dim[1].dim_value != len(std):
-            raise ValueError("--pixel-bias-value (" + str(mean) + ") and --pixel-scale-value (" + str(std) + ") should be same as input dimension:" + str(i_n.type.tensor_type.shape.dim[1].dim_value) )
+            mean = normalize_cfg['mean']
+            std = normalize_cfg['std']
 
-        # add 128 for changing input range from 0~255 to -128~127 (int8) due to quantization due to quantization limitation
-        normalize_bn_bias = [ -1*mean[0]/std[0] + 128.0/std[0], -1*mean[1]/std[1] + 128.0/std[1], -1*mean[2]/std[2] + 128.0/std[2]] 
-        normalize_bn_scale = [1/std[0], 1/std[1], 1/std[2]]
+            i_n = m.graph.input[0]
+            if i_n.type.tensor_type.shape.dim[1].dim_value != len(mean) or  i_n.type.tensor_type.shape.dim[1].dim_value != len(std):
+                raise ValueError("--pixel-bias-value (" + str(mean) + ") and --pixel-scale-value (" + str(std) + ") should be same as input dimension:" + str(i_n.type.tensor_type.shape.dim[1].dim_value) )
 
-        other.add_shift_scale_bn_after(m.graph, i_n.name, normalize_bn_bias, normalize_bn_scale)
-        m = onnx.utils.polish_model(m)
+            # add 128 for changing input range from 0~255 to -128~127 (int8) due to quantization due to quantization limitation
+            normalize_bn_bias = [ -1*mean[0]/std[0] + 128.0/std[0], -1*mean[1]/std[1] + 128.0/std[1], -1*mean[2]/std[2] + 128.0/std[2]] 
+            normalize_bn_scale = [1/std[0], 1/std[1], 1/std[2]]
 
-        onnx_out = output_file[:-5] + '_kneron_optimized.onnx'
+            other.add_shift_scale_bn_after(m.graph, i_n.name, normalize_bn_bias, normalize_bn_scale)
+            m = onnx.utils.polish_model(m)
+
+        onnx_out = output_file
+        onnx.helper.set_model_props(m, {'Kn. T.P. version': " MMDetection_KN v0.1.0" , 'in-model-preproc': str(in_model_preprocess)})
         onnx.save(m, onnx_out)
         print("exported success: ", onnx_out)
 
@@ -332,20 +334,6 @@ def parse_args():
         default=[800, 1216],
         help='input image size')
     parser.add_argument(
-        '--mean',
-        type=float,
-        nargs='+',
-        default=[123.675, 116.28, 103.53],
-        help='mean value used for preprocess input data.This argument \
-        is deprecated and will be removed in future releases.')
-    parser.add_argument(
-        '--std',
-        type=float,
-        nargs='+',
-        default=[58.395, 57.12, 57.375],
-        help='variance value used for preprocess input data. '
-        'This argument is deprecated and will be removed in future releases.')
-    parser.add_argument(
         '--cfg-options',
         nargs='+',
         action=DictAction,
@@ -365,13 +353,18 @@ def parse_args():
         help='Whether to export model without post process. Experimental '
         'option. We do not guarantee the correctness of the exported '
         'model.')
+    parser.add_argument(
+        '--in-model-preprocess',
+        action='store_true',
+        help='Add batchnormalization layer in front of model as a role of data preprocessing(noramlization)  '
+        ' according to the normalization value in config. ')
     args = parser.parse_args()
     return args
 
 
 if __name__ == '__main__':
     args = parse_args()
-    warnings.warn('Arguments like `--mean`, `--std`, `--dataset` would be \
+    warnings.warn('Arguments like `--skip-postprocess`, `--dataset` would be \
         parsed directly from config file and are deprecated and \
         will be removed in future releases.')
 
@@ -419,5 +412,6 @@ if __name__ == '__main__':
         test_img=args.test_img,
         do_simplify=args.simplify,
         dynamic_export=args.dynamic_export,
-        skip_postprocess=args.skip_postprocess)
+        skip_postprocess=args.skip_postprocess,
+        in_model_preprocess = args.in_model_preprocess)
 
