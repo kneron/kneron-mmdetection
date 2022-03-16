@@ -3,7 +3,6 @@
 
 ## Introduction
 
----
   [Kneron-AI_Training_mmDetection](https://github.com/kneron/AI_Training_mmDetection) is a platform built upon the well-known [MMDetection](https://github.com/open-mmlab/mmdetection) for detection and instance segmentation. We encourage you to start with [YOLOX: Step-By-Step](docs_kneron/yolox_step_by_step.md) to build basic knowledge of Kneron-Edition MMDetection, and read [MMDetection docs](https://mmdetection.readthedocs.io/en/latest/) for detailed MMDetection usage. 
 
   In this repository, we provide an end-to-end training/deployment flow to realize on Kneron's AI accelerators: 
@@ -25,27 +24,22 @@
      - Convert the trained pytorch model to [Kneron-NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model, which could be used on Kneron hardware platform.
 
 ## License
----
 
 This project is released under the [Apache 2.0 license](LICENSE).
 
 ## Changelog
----
 N/A
 
 ## Overview of Benchmark and Kneron Model Zoo
----
 | Backbone  | size   | Mem (GB) |   box AP | Config | Download |
 |:---------:|:-------:|:-------:|:-------:|:--------:|:------:|
 | YOLOX-s | 640 |   7.6      |   40.5  | [config](https://github.com/open-mmlab/mmdetection/tree/master/configs/yolox/yolox_s_8x8_300e_coco.py)       |[model](https://github.com/kneron/Model_Zoo/blob/main/mmdetection/yolox_s/latest.zip)
 
 ## Installation
----
 - Please refer to [get_started.md](docs/en/get_started.md) for installation.
 - Please refer to [Kneron PLUS - Python: Installation](http://doc.kneron.com/docs/#plus_python/introduction/install_dependency/) for the environment setup for Kneron USB accelerator.
 
 ## Getting Started
----
 ### Tutorial - Kneron Edition
 - [YOLOX: Step-By-Step](docs_kneron/yolox_step_by_step.md): A tutorial for users to get started easily. To see detailed documents, please see below.
 
@@ -60,7 +54,6 @@ N/A
 - [Original MMDetection readthedoc](https://mmdetection.readthedocs.io/en/latest/): Original MMDetection documents.
 
 ## Contributing
----
 [Kneron-AI_Training_mmDetection](https://github.com/kneron/AI_Training_mmDetection) a platform built upon [OpenMMLab-MMDetection](https://github.com/open-mmlab/mmdetection)
 
 - For issues regarding to the original [mmdetection](https://github.com/open-mmlab/mmdetection):
