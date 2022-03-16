@@ -178,7 +178,7 @@ m = ktc.onnx_optimizer.onnx2onnx_flow(m)
 onnx.save(m,'latest.opt.onnx')
 ```
 
-### Step 4-5: Config and load data necessary for ktc, and check if onnx is ok for toolchain
+### Step 4-5: Configure and load data necessary for ktc, and check if onnx is ok for toolchain
 ```python 
 # npu (only) performance simulation
 km = ktc.ModelConfig(20008, "0001", "720", onnx_model=m)
