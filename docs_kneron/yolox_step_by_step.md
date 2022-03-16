@@ -80,7 +80,7 @@ mmdetection
 ...
 ```
 
-If your folder structure is different, you may need to change the corresponding paths in config files.
+It's recommended to *symlink* the dataset folder to mmdetection folder. However, if you place your dataset folder at different place and do not want to symlink, you have to change the corresponding paths in config files (absolute path is recommended).
 
 ### Step 1-2: How to train YOLOX
 
