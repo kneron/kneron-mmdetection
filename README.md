@@ -56,8 +56,8 @@ N/A
 ## Contributing
 [Kneron-AI_Training_mmDetection](https://github.com/kneron/AI_Training_mmDetection) a platform built upon [OpenMMLab-MMDetection](https://github.com/open-mmlab/mmdetection)
 
-- For issues regarding to the original [mmdetection](https://github.com/open-mmlab/mmdetection):
-We appreciate all contributions to improve [OpenMMLab-mmdetection](https://github.com/open-mmlab/mmdetection). Ongoing projects can be found in out [GitHub Projects](https://github.com/open-mmlab/mmdetection/projects). Welcome community users to participate in these projects. Please refer to [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the contributing guideline.
+- For issues regarding to the original [MMDetection](https://github.com/open-mmlab/mmdetection):
+We appreciate all contributions to improve [OpenMMLab-MMDetection](https://github.com/open-mmlab/mmdetection). Ongoing projects can be found in out [GitHub Projects](https://github.com/open-mmlab/mmdetection/projects). Welcome community users to participate in these projects. Please refer to [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the contributing guideline.
 
 - For issues regarding to this repository [Kneron-AI_Training_mmDetection](https://github.com/kneron/AI_Training_mmDetection): Welcome to leave the comment or submit pull requests here to improve Kneron-AI_Training_mmDetection
 
