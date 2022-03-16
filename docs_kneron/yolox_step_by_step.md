@@ -61,14 +61,14 @@ The default learning rate in config files is for 8 GPUs and 2 img/gpu (batch siz
 ### Step 1-1: Prepare datasets
 
 Public datasets such as [Pascal VOC](http://host.robots.ox.ac.uk/pascal/VOC/index.html) and [COCO](https://cocodataset.org/#download) are available from official websites or mirrors. Note: In detection task, Pascal VOC 2012 is an extension of Pascal VOC 2007 without overlap, so we can combine them into 1 dataset for training.
-We suggest that you download and extract the dataset to somewhere outside the project directory and symlink (`ln`) the dataset root to `$MMDETECTION/data` (`ln realpath/to/dataset $MMDetection/data/dataset`), as shown below:
+We suggest that you download and extract the dataset to somewhere outside the project directory and symlink (`ln`) the dataset root to `$MMDETECTION/data` (`ln -s realpath/to/dataset $MMDetection/data/dataset`), as shown below:
 
 ```plain
 mmdetection
 ├── mmdet
 ├── tools
 ├── configs
-├── data
+├── data (this folder should be made beforehand)
 │   ├── coco (symlink)
 │   │   ├── annotations
 │   │   ├── train2017
