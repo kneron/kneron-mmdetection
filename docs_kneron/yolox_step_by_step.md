@@ -5,10 +5,10 @@
 - Python 3.6+
 - PyTorch 1.3+
 - CUDA 9.2+ (If you built PyTorch from source, CUDA 9.0 is also compatible)
-- (Optional, to build from source) GCC 5+
-- [mmcv-full](https://mmcv.readthedocs.io/en/latest/#installation)
+- (Optional, used to build from source) GCC 5+
+- [mmcv-full](https://mmcv.readthedocs.io/en/latest/#installation) (Note: not `mmcv`!)
 
-**Note:** You need to run `pip uninstall mmcv` first if you have mmcv installed.
+**Note:** You need to run `pip uninstall mmcv` first if you have `mmcv` installed.
 If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
 
 
@@ -42,12 +42,12 @@ If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
     pip install -v -e .  # or "python setup.py develop"
     ```
 
-# Step 1: Training models on standard datasets 
+# Step 1: Train models on standard datasets 
 
-MMDetection provides hundreds of existing detection models in [Model Zoo](https://mmdetection.readthedocs.io/en/latest/model_zoo.html)) and supports several standard datasets like Pascal VOC, COCO, CityScapes, LVIS, etc. This note demonstrates how to perform common object detection tasks with these existing models and standard datasets, including:
+MMDetection provides hundreds of detection models in [Model Zoo](https://mmdetection.readthedocs.io/en/latest/model_zoo.html)) and supports several standard datasets like Pascal VOC, COCO, CityScapes, LVIS, etc. This note demonstrates how to perform common object detection tasks with these existing models and standard datasets, including:
 
-- Use existing models to inference on given images.
-- Evaluate existing models on standard datasets.
+- Use existing trained models to inference on given images.
+- Evaluate existing trained models on standard datasets.
 - Train models on standard datasets.
 
 ## Train models on standard datasets
@@ -55,7 +55,7 @@ MMDetection provides hundreds of existing detection models in [Model Zoo](https:
 MMDetection also provides out-of-the-box tools for training detection models.
 This section will show how to train models (under [configs](https://github.com/open-mmlab/mmdetection/tree/master/configs)) on COCO.
 
-**Important**: You might need to modify the [config](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/config.md) according your GPUs resource (such as `samples_per_gpu`, `workers_per_gpu` ...etc due to your GPUs RAM limitation).
+**Important**: You might need to modify the [config file](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/config.md) according your GPUs resource (such as `samples_per_gpu`, `workers_per_gpu` ...etc due to your GPUs RAM limitation).
 The default learning rate in config files is for 8 GPUs and 2 img/gpu (batch size = 8\*2 = 16).
 
 ### Step 1-1: Prepare datasets
@@ -86,7 +86,7 @@ If your folder structure is different, you may need to change the corresponding 
 
 [YOLOX: Exceeding YOLO Series in 2021](https://arxiv.org/abs/2107.08430)
 
-We only need the configuration file (which is provided in configs/yolox) to train YOLOX: 
+We only need the configuration file (which is provided in `configs/yolox`) to train YOLOX: 
 ```python
 python tools/train.py configs/yolox/yolox_s_8x8_300e_coco_img_norm.py
 ```
@@ -98,10 +98,10 @@ wget https://github.com/kneron/Model_Zoo/raw/main/mmdetection/yolox_s/latest.zip
 unzip latest.zip
 cd ..
 ```
-* (Note 3) This is a "training from scratch" tutorial, which might need lot's of time and gpu resource. If you want to train a model to detect specific object, it is recommended that you read the [finetune.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/finetune.md), [customize_dataset.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/customize_dataset.md), and [colab tutorial: Train A Detector on A Customized Dataset](https://github.com/open-mmlab/mmdetection/blob/master/demo/MMDet_Tutorial.ipynb).
+* (Note 3) This is a "training from scratch" tutorial, which might need lots of time and gpu resource. If you want to train a model on your custom dataset, it is recommended that you read [finetune.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/finetune.md), [customize_dataset.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/customize_dataset.md), and [colab tutorial: Train A Detector on A Customized Dataset](https://github.com/open-mmlab/mmdetection/blob/master/demo/MMDet_Tutorial.ipynb).
 
 # Step 2: Test trained model
-'tools/test_kneron.py' is a script which generates inference results from test set with our pytorch model and evaluates the results to see if our pytorch model is well trained (if `--eval` argument is given). Note that it's always good to evluate our pytorch model before deploying it.
+`tools/test_kneron.py` is a script that generates inference results from test set with our pytorch model and evaluates the results to see if our pytorch model is well trained (if `--eval` argument is given). Note that it's always good to evluate our pytorch model before deploying it.
 
 ```python
 python tools/test_kneron.py \
@@ -114,7 +114,7 @@ python tools/test_kneron.py \
 * `work_dirs/latest.pth` is your trained yolox model
 
 The expected result of the command above will be something similar to the following text (the numbers may slightly differ):
-```
+```plain
 ...
 Average Precision (AP) @[ IoU=0.50:0.95 | area= all | maxDets=100 ] = 0.379
 Average Precision (AP) @[ IoU=0.50 | area= all | maxDets=1000 ] = 0.564
@@ -134,7 +134,7 @@ OrderedDict([('bbox_mAP', 0.379), ('bbox_mAP_50', 0.564), ('bbox_mAP_75', 0.41),
 ```
 
 # Step 3: Export onnx
-'tools/deployment/pytorch2onnx.py' is a script provided by MMDetection to help user to convert our trained pth model to onnx:
+`tools/deployment/pytorch2onnx.py` is a script provided by MMDetection to help user to convert our trained pth model to onnx:
 ```python
 python tools/deployment/pytorch2onnx.py \
     configs/yolox/yolox_s_8x8_300e_coco_img_norm.py \
@@ -143,25 +143,25 @@ python tools/deployment/pytorch2onnx.py \
     --skip-postprocess \
     --shape 640 640
 ```
-* 'configs/yolox/yolox_s_8x8_300e_coco_img_norm.py' is your yolox training config
-* 'work_dirs/latest.pth' is your trained yolox model
+* `configs/yolox/yolox_s_8x8_300e_coco_img_norm.py` is your yolox training config
+* `work_dirs/latest.pth` is your trained yolox model
 
-The output onnx should be the same name as 'work_dirs/latest.pth' with '.onnx' post-fix in the same folder.
+The output onnx should be the same name as `work_dirs/latest.pth` with `.onnx` postfix in the same folder.
 
 
 # Step 4: Convert onnx to [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model for Kneron platform
  
 ### Step 4-1: Install Kneron toolchain docker:
-* check [document](http://doc.kneron.com/docs/#toolchain/manual/#1-installation)
+* Check [document](http://doc.kneron.com/docs/#toolchain/manual/#1-installation)
 
 ### Step 4-2: Mout Kneron toolchain docker 
-* Mount a folder (e.g. '/mnt/hgfs/Competition') to toolchain docker as '/data1', the converted onnx in Step 3 should be put here, all the toolchain operation should happen in this folder.
+* Mount a folder (e.g. '/mnt/hgfs/Competition') to toolchain docker container as `/data1`. The converted onnx in Step 3 should be put here. All the toolchain operation should happen in this folder.
 ```shell
 sudo docker run --rm -it -v /mnt/hgfs/Competition:/data1 kneron/toolchain:latest
 ```
 
 ### Step 4-3: Import KTC and other required packages in python shell
-* Now, we go through all toolchain flow by KTC (Kneron Toolchain) using the Python API in the Python shell
+* Here we demonstrate how to go through all Kneron Toolchain (KTC) flow through Python API:
 ```python
 import ktc
 import numpy as np
@@ -170,7 +170,7 @@ import onnx
 from PIL import Image
 ```
 
-### Step 4-4: optimize the onnx model
+### Step 4-4: Optimize the onnx model
 ```python
 onnx_path = '/data1/latest.onnx'
 m = onnx.load(onnx_path)
@@ -178,7 +178,7 @@ m = ktc.onnx_optimizer.onnx2onnx_flow(m)
 onnx.save(m,'latest.opt.onnx')
 ```
 
-### Step 4-5: config and load nessasary data for ktc, and check onnx is ok for toolchain
+### Step 4-5: Config and load data necessary for ktc, and check if onnx is ok for toolchain
 ```python 
 # npu (only) performance simulation
 km = ktc.ModelConfig(20008, "0001", "720", onnx_model=m)
@@ -187,12 +187,12 @@ print("\nNpu performance evaluation result:\n" + str(eval_result))
 ```
 
 ### Step 4-6: quantize the onnx model
-We use [random picked voc dataset](https://www.kneron.com/forum/uploads/112/SMZ3HLBK3DXJ.7z) (50 images) as quantization data , we have to
-1. download the data 
-2. uncompression the data as folder named "voc_data50" 
-3. put the "voc_data50" into docker mounted folder (in docker, the path looks like "/data1/voc_data50")
+We [random sampled 50 images from voc dataset](https://www.kneron.com/forum/uploads/112/SMZ3HLBK3DXJ.7z) as quantization data, we have to
+1. Download the data 
+2. Uncompression the data as folder named `voc_data50"`
+3. Put the `voc_data50` into docker mounted folder (the path in docker container should be `/data1/voc_data50`)
 
-the following script will do some preprocess(should be the same as training code) on our quantization data, and put it in a list:
+The following script will do some preprocess(should be the same as training code) on our quantization data, and put it in a list:
 ```python
 import os
 from os import walk
@@ -210,30 +210,28 @@ for (dirpath, dirnames, filenames) in walk("/data1/voc_data50"):
         img_list.append(img_data)
 ```
 
-Then, perform quantization. The BIE model will be generated at /data1/output.bie.
+Then perform quantization. The BIE model will be generated at `/data1/output.bie`.
 
 ```python
-# fix point analysis
+# fixed-point analysis
 bie_model_path = km.analysis({"input": img_list})
-print("\nFix point analysis done. Save bie model to '" + str(bie_model_path) + "'")
+print("\nFixed-point analysis done. Saved bie model to '" + str(bie_model_path) + "'")
 ```
 
 ### Step 4-7: Compile
-The final step is compile the BIE model into an NEF model.
+The final step is to compile the BIE model into an NEF model.
 ```python
 # compile
 nef_model_path = ktc.compile([km])
-print("\nCompile done. Save Nef file to '" + str(nef_model_path) + "'")
+print("\nCompile done. Saved Nef file to '" + str(nef_model_path) + "'")
 ```
 
-You can find the NEF file under /data1/batch_compile/models_720.nef. models_720.nef is the final compiled model.
+You can find the NEF file at `/data1/batch_compile/models_720.nef`. `models_720.nef` is the final compiled model.
 
 # Step 5: Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on KL720
 
 * Check Kneron PLUS official document:
-  * python version:
+  * Python API:
     http://doc.kneron.com/docs/#plus_python/#_top
-  * C version:
+  * C API:
     http://doc.kneron.com/docs/#plus_c/getting_started/
-
-
