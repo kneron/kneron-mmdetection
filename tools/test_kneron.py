@@ -245,17 +245,20 @@ def main():
             formate_data = []
             for dets, data in zip(outputs, data_loader):
                 for label, det in enumerate(dets):
-                    cls = np.full((len(det),1), label+1)
+                    cls = np.full((len(det), 1), label + 1)
                     det = np.hstack((det, cls))
-                    det[:,2] = det[:,2] - det[:,0]
-                    det[:,3] = det[:,3] - det[:,1]
+                    det[:, 2] = det[:, 2] - det[:, 0]
+                    det[:, 3] = det[:, 3] - det[:, 1]
                     if label == 0:
                         tmp = det
                     else:
                         tmp = np.vstack((tmp, det))
-                formate_data.append({'img_path': data['img_metas'][0].data[0][0]['filename'], 'bbox': tmp.tolist()})
+                formate_data.append({
+                    'img_path': data['img_metas'][0].data[0][0]['filename'],
+                    'bbox': tmp.tolist()
+                })
             with open(args.out_kneron, 'w') as f:
-                json.dump(formate_data, f, ensure_ascii = True, indent = 4)
+                json.dump(formate_data, f, ensure_ascii=True, indent=4)
         kwargs = {} if args.eval_options is None else args.eval_options
         if args.format_only:
             dataset.format_results(outputs, **kwargs)
