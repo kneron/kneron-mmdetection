@@ -186,7 +186,7 @@ eval_result = km.evaluate()
 print("\nNpu performance evaluation result:\n" + str(eval_result))
 ```
 
-### Step 4-6: quantize the onnx model
+### Step 4-6: Quantize the onnx model
 We [random sampled 50 images from voc dataset](https://www.kneron.com/forum/uploads/112/SMZ3HLBK3DXJ.7z) as quantization data, we have to
 1. Download the data 
 2. Uncompression the data as folder named `voc_data50"`
