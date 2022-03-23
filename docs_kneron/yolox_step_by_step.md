@@ -100,8 +100,8 @@ cd ..
 ```
 * (Note 3) This is a "training from scratch" tutorial, which might need lots of time and gpu resource. If you want to train a model on your custom dataset, it is recommended that you read [finetune.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/finetune.md), [customize_dataset.md](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/customize_dataset.md), and [colab tutorial: Train A Detector on A Customized Dataset](https://github.com/open-mmlab/mmdetection/blob/master/demo/MMDet_Tutorial.ipynb).
 
-# Step 2: Test trained model
-`tools/test_kneron.py` is a script that generates inference results from test set with our pytorch model and evaluates the results to see if our pytorch model is well trained (if `--eval` argument is given). Note that it's always good to evluate our pytorch model before deploying it.
+# Step 2: Test trained pytorch model
+`tools/test_kneron.py` is a script that generates inference results from test set with our pytorch model(or onnx model) and evaluates the results to see if our pytorch model(or onnx model) is well trained (if `--eval` argument is given). Note that it's always good to evluate our pytorch model before deploying it.
 
 ```python
 python tools/test_kneron.py \
@@ -116,27 +116,27 @@ python tools/test_kneron.py \
 The expected result of the command above will be something similar to the following text (the numbers may slightly differ):
 ```plain
 ...
-Average Precision (AP) @[ IoU=0.50:0.95 | area= all | maxDets=100 ] = 0.379
-Average Precision (AP) @[ IoU=0.50 | area= all | maxDets=1000 ] = 0.564
-Average Precision (AP) @[ IoU=0.75 | area= all | maxDets=1000 ] = 0.410
-Average Precision (AP) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.205
-Average Precision (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.416
-Average Precision (AP) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.503
-Average Recall (AR) @[ IoU=0.50:0.95 | area= all | maxDets=100 ] = 0.530
-Average Recall (AR) @[ IoU=0.50:0.95 | area= all | maxDets=300 ] = 0.531
-Average Recall (AR) @[ IoU=0.50:0.95 | area= all | maxDets=1000 ] = 0.531
-Average Recall (AR) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.317
-Average Recall (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.582
-Average Recall (AR) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.678
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.378
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=1000 ] = 0.563
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=1000 ] = 0.408
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.207
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.416
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.505
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.529
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=300 ] = 0.530
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=1000 ] = 0.530
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.318
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.581
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.677
 
-OrderedDict([('bbox_mAP', 0.379), ('bbox_mAP_50', 0.564), ('bbox_mAP_75', 0.41), ('bbox_mAP_s', 0.205), ('bbox_mAP_m', 0.416), ('bbox_mAP_l', 0.503), ('bbox_mAP_copypaste', '0.379 0.564 0.410 0.205 0.416 0.503')])
+OrderedDict([('bbox_mAP', 0.378), ('bbox_mAP_50', 0.563), ('bbox_mAP_75', 0.408), ('bbox_mAP_s', 0.207), ('bbox_mAP_m', 0.416), ('bbox_mAP_l', 0.505), ('bbox_mAP_copypaste', '0.378 0.563 0.408 0.207 0.416 0.505')])
 ...
 ```
 
 # Step 3: Export onnx
-`tools/deployment/pytorch2onnx.py` is a script provided by MMDetection to help user to convert our trained pth model to onnx:
+`tools/deployment/pytorch2onnx_kneron.py` is a script provided by Kneron to help user to convert our trained pth model to kneron-optimized onnx:
 ```python
-python tools/deployment/pytorch2onnx.py \
+python tools/deployment/pytorch2onnx_kneron.py \
     configs/yolox/yolox_s_8x8_300e_coco_img_norm.py \
     work_dirs/yolox_s_8x8_300e_coco_img_norm/latest.pth \
     --output-file work_dirs/latest.onnx \
@@ -148,19 +148,51 @@ python tools/deployment/pytorch2onnx.py \
 
 The output onnx should be the same name as `work_dirs/latest.pth` with `.onnx` postfix in the same folder.
 
+# Step 4: Test exported onnx model:
+We use the same script(`tools/test_kneron.py`) in step 2 to test our exported onnx. The only one difference between step 4 and step 2 is changing the input model from pytorch model('work_dirs/latest.pth') to onnx model('work_dirs/latest.onnx').
 
-# Step 4: Convert onnx to [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model for Kneron platform
+```python
+python tools/test_kneron.py \
+    configs/yolox/yolox_s_8x8_300e_coco_img_norm.py \
+    work_dirs/latest.pth \
+    --eval bbox \
+    --out-kneron output.json
+```
+* `configs/yolox/yolox_s_8x8_300e_coco_img_norm.py` is your yolox training config
+* `work_dirs/latest.onnx` is your exported yolox onnx model
+
+The expected result of the command above will be something similar to the following text (the numbers may slightly differ):
+```plain
+...
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.379
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=1000 ] = 0.564
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=1000 ] = 0.410
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.205
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.416
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.503
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.530
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=300 ] = 0.531
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=1000 ] = 0.531
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.317
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.582
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.678
+
+OrderedDict([('bbox_mAP', 0.379), ('bbox_mAP_50', 0.564), ('bbox_mAP_75', 0.41), ('bbox_mAP_s', 0.205), ('bbox_mAP_m', 0.416), ('bbox_mAP_l', 0.503), ('bbox_mAP_copypaste', '0.379 0.564 0.410 0.205 0.416 0.503')])
+...
+```
+
+# Step 5: Convert onnx to [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model for Kneron platform
  
-### Step 4-1: Install Kneron toolchain docker:
+### Step 5-1: Install Kneron toolchain docker:
 * Check [document](http://doc.kneron.com/docs/#toolchain/manual/#1-installation)
 
-### Step 4-2: Mout Kneron toolchain docker 
+### Step 5-2: Mout Kneron toolchain docker 
 * Mount a folder (e.g. '/mnt/hgfs/Competition') to toolchain docker container as `/data1`. The converted onnx in Step 3 should be put here. All the toolchain operation should happen in this folder.
 ```shell
 sudo docker run --rm -it -v /mnt/hgfs/Competition:/data1 kneron/toolchain:latest
 ```
 
-### Step 4-3: Import KTC and other required packages in python shell
+### Step 5-3: Import KTC and other required packages in python shell
 * Here we demonstrate how to go through all Kneron Toolchain (KTC) flow through Python API:
 ```python
 import ktc
@@ -170,7 +202,7 @@ import onnx
 from PIL import Image
 ```
 
-### Step 4-4: Optimize the onnx model
+### Step 5-4: Optimize the onnx model
 ```python
 onnx_path = '/data1/latest.onnx'
 m = onnx.load(onnx_path)
@@ -178,7 +210,7 @@ m = ktc.onnx_optimizer.onnx2onnx_flow(m)
 onnx.save(m,'latest.opt.onnx')
 ```
 
-### Step 4-5: Configure and load data necessary for ktc, and check if onnx is ok for toolchain
+### Step 5-5: Configure and load data necessary for ktc, and check if onnx is ok for toolchain
 ```python 
 # npu (only) performance simulation
 km = ktc.ModelConfig(20008, "0001", "720", onnx_model=m)
@@ -186,7 +218,7 @@ eval_result = km.evaluate()
 print("\nNpu performance evaluation result:\n" + str(eval_result))
 ```
 
-### Step 4-6: Quantize the onnx model
+### Step 5-6: Quantize the onnx model
 We [random sampled 50 images from voc dataset](https://www.kneron.com/forum/uploads/112/SMZ3HLBK3DXJ.7z) as quantization data, we have to
 1. Download the data 
 2. Uncompression the data as folder named `voc_data50"`
@@ -218,7 +250,7 @@ bie_model_path = km.analysis({"input": img_list})
 print("\nFixed-point analysis done. Saved bie model to '" + str(bie_model_path) + "'")
 ```
 
-### Step 4-7: Compile
+### Step 5-7: Compile
 The final step is to compile the BIE model into an NEF model.
 ```python
 # compile
@@ -228,7 +260,7 @@ print("\nCompile done. Saved Nef file to '" + str(nef_model_path) + "'")
 
 You can find the NEF file at `/data1/batch_compile/models_720.nef`. `models_720.nef` is the final compiled model.
 
-# Step 5: Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on KL720
+# Step 6: Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on KL720
 
 * Check Kneron PLUS official document:
   * Python API:
