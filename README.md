@@ -1,6 +1,5 @@
 # Kneron AI Training/Deployment Platform (mmDetection-based)
 
-
 ## Introduction
 
   [kneron-mmdetection](https://github.com/kneron/kneron-mmdetection) is a platform built upon the well-known [mmdetection](https://github.com/open-mmlab/mmdetection) for detection and instance segmentation. We encourage you to start with [YOLOX: Step-By-Step](docs_kneron/yolox_step_by_step.md) to build basic knowledge of Kneron-Edition mmdetection, and read [mmdetection docs](https://mmdetection.readthedocs.io/en/latest/) for detailed mmdetection usage.
