@@ -149,7 +149,7 @@ python tools/deployment/pytorch2onnx_kneron.py \
 The output onnx should be the same name as `work_dirs/latest.pth` with `.onnx` postfix in the same folder.
 
 # Step 4: Test exported onnx model:
-We use the same script(`tools/test_kneron.py`) in step 2 to test our exported onnx. The only one difference between step 4 and step 2 is changing the input model from pytorch model('work_dirs/latest.pth') to onnx model('work_dirs/latest.onnx').
+We use the same script(`tools/test_kneron.py`) in step 2 to test our exported onnx. The only difference is that instead of pytorch model, we use onnx model (`work_dirs/latest.onnx`).
 
 ```python
 python tools/test_kneron.py \
