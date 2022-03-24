@@ -151,7 +151,7 @@ We use the same script(`tools/test_kneron.py`) in step 2 to test our exported on
 ```python
 python tools/test_kneron.py \
     configs/yolox/yolox_s_8x8_300e_coco_img_norm.py \
-    work_dirs/latest.pth \
+    work_dirs/latest.onnx \
     --eval bbox \
     --out-kneron output.json
 ```
