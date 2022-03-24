@@ -488,3 +488,63 @@ class YOLOXHead(BaseDenseHead, BBoxTestMixin):
         l1_target[:, :2] = (gt_cxcywh[:, :2] - priors[:, :2]) / priors[:, 2:]
         l1_target[:, 2:] = torch.log(gt_cxcywh[:, 2:] / priors[:, 2:] + eps)
         return l1_target
+
+    def get_bboxes_kn(self,
+                   node_outputs,  # should be list of numpy array
+                   img_metas=None,
+                   cfg=None,
+                   rescale=False,
+                   with_nms=True):
+
+        cls_scores = [node_outputs[0], node_outputs[1], node_outputs[2]]
+        bbox_preds = [node_outputs[3], node_outputs[4], node_outputs[5]]
+        objectnesses = [node_outputs[6], node_outputs[7], node_outputs[8]]
+
+        assert len(cls_scores) == len(bbox_preds) == len(objectnesses)
+        cfg = self.test_cfg if cfg is None else cfg
+        scale_factors = [img_meta['scale_factor'] for img_meta in img_metas]
+
+        num_imgs = len(img_metas)
+        featmap_sizes = [cls_score.shape[2:] for cls_score in cls_scores]
+        mlvl_priors = self.prior_generator.grid_priors(
+            featmap_sizes,
+            dtype=cls_scores[0].dtype,
+            device=cls_scores[0].device,
+            with_stride=True)
+
+        # flatten cls_scores, bbox_preds and objectness
+        flatten_cls_scores = [
+            cls_score.permute(0, 2, 3, 1).reshape(num_imgs, -1,
+                                                  self.cls_out_channels)
+            for cls_score in cls_scores
+        ]
+        flatten_bbox_preds = [
+            bbox_pred.permute(0, 2, 3, 1).reshape(num_imgs, -1, 4)
+            for bbox_pred in bbox_preds
+        ]
+        flatten_objectness = [
+            objectness.permute(0, 2, 3, 1).reshape(num_imgs, -1)
+            for objectness in objectnesses
+        ]
+
+        flatten_cls_scores = torch.cat(flatten_cls_scores, dim=1).sigmoid()
+        flatten_bbox_preds = torch.cat(flatten_bbox_preds, dim=1)
+        flatten_objectness = torch.cat(flatten_objectness, dim=1).sigmoid()
+        flatten_priors = torch.cat(mlvl_priors)
+
+        flatten_bboxes = self._bbox_decode(flatten_priors, flatten_bbox_preds)
+
+        if rescale:
+            flatten_bboxes[..., :4] /= flatten_bboxes.new_tensor(
+                scale_factors).unsqueeze(1)
+
+        result_list = []
+        for img_id in range(len(img_metas)):
+            cls_scores = flatten_cls_scores[img_id]
+            score_factor = flatten_objectness[img_id]
+            bboxes = flatten_bboxes[img_id]
+
+            result_list.append(
+                self._bboxes_nms(cls_scores, bboxes, score_factor, cfg))
+
+        return result_list

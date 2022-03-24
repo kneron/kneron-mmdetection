@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+# from asyncio.windows_events import NULL
 import warnings
 
 import torch
@@ -7,6 +8,7 @@ from mmdet.core import bbox2result
 from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector
 
+import onnxruntime
 
 @DETECTORS.register_module()
 class SingleStageDetector(BaseDetector):
@@ -53,6 +55,59 @@ class SingleStageDetector(BaseDetector):
         x = self.extract_feat(img)
         outs = self.bbox_head(x)
         return outs
+
+    def forward_kneron(self, img, img_metas, rescale=False, return_loss=False):
+
+        for var, name in [(img, 'imgs'), (img_metas, 'img_metas')]:
+            if not isinstance(var, list):
+                raise TypeError(f'{name} must be a list, but got {type(var)}')
+
+        num_augs = len(img)
+        if num_augs != len(img_metas):
+            raise ValueError(f'num of augmentations ({len(img)}) '
+                             f'!= num of image meta ({len(img_metas)})')
+
+        # NOTE the batched image size information may be useful, e.g.
+        # in DETR, this is needed for the construction of masks, which is
+        # then used for the transformer_head.
+        for im, img_meta in zip(img, img_metas):
+            batch_size = len(img_meta)
+            for img_id in range(batch_size):
+                img_meta[img_id]['batch_input_shape'] = tuple(im.size()[-2:])
+
+        outs = None
+        if 'proposals' in img_meta:
+            img_meta['proposals'] = img_meta['proposals'][0]
+        img = img[0]
+        img_metas = img_metas[0]
+
+        results_list = None
+        if hasattr(self, '__Kn_ONNX_Sess__'):
+            tmp = getattr(self, '__Kn_ONNX_Sess__').run(None, {'input': img.cpu().detach().numpy()})
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            res = []
+
+            for o in tmp:
+                res.append( torch.from_numpy(o).float().to(device))
+
+            assert hasattr(self.bbox_head, 'get_bboxes_kn'), 'Error: None implemented kneron bbox_head forward type!'
+
+            results_list = self.bbox_head.get_bboxes_kn(
+                res, img_metas=img_metas, rescale=rescale)
+
+        else: # debug purpose
+            feat = self.extract_feat(img)
+            outs = self.bbox_head(feat)
+
+            results_list = self.bbox_head.get_bboxes(
+                *outs, img_metas=img_metas, rescale=rescale)
+
+        bbox_results = [
+            bbox2result(det_bboxes, det_labels, self.bbox_head.num_classes)
+            for det_bboxes, det_labels in results_list
+        ]
+
+        return bbox_results
 
     def forward_train(self,
                       img,
