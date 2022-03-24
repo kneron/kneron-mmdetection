@@ -50,17 +50,17 @@ MMDetection provides hundreds of detection models in [Model Zoo](https://mmdetec
 - Evaluate existing trained models on standard datasets.
 - Train models on standard datasets.
 
-## Train models on standard datasets
+## Train YOLOX on COCO detection dataset
 
-MMDetection also provides out-of-the-box tools for training detection models.
+MMDetection provides out-of-the-box tools for training detection models.
 This section will show how to train models (under [configs](https://github.com/open-mmlab/mmdetection/tree/master/configs)) on COCO.
 
 **Important**: You might need to modify the [config file](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/config.md) according your GPUs resource (such as `samples_per_gpu`, `workers_per_gpu` ...etc due to your GPUs RAM limitation).
 The default learning rate in config files is for 8 GPUs and 2 img/gpu (batch size = 8\*2 = 16).
 
-### Step 1-1: Prepare datasets
+### Step 1-1: Prepare COCO detection dataset
 
-Public datasets such as [Pascal VOC](http://host.robots.ox.ac.uk/pascal/VOC/index.html) and [COCO](https://cocodataset.org/#download) are available from official websites or mirrors. Note: In detection task, Pascal VOC 2012 is an extension of Pascal VOC 2007 without overlap, so we can combine them into 1 dataset for training.
+[COCO](https://cocodataset.org/#download) is available on official websites or mirrors.
 We suggest that you download and extract the dataset to somewhere outside the project directory and symlink (`ln`) the dataset root to `$MMDETECTION/data` (`ln -s realpath/to/dataset $MMDetection/data/dataset`), as shown below:
 
 ```plain
@@ -74,15 +74,12 @@ mmdetection
 │   │   ├── train2017
 │   │   ├── val2017
 │   │   ├── test2017
-│   ├── VOCdevkit (symlink)
-│   │   ├── VOC2007
-│   │   ├── VOC2012
 ...
 ```
 
 It's recommended to *symlink* the dataset folder to mmdetection folder. However, if you place your dataset folder at different place and do not want to symlink, you have to change the corresponding paths in config files (absolute path is recommended).
 
-### Step 1-2: How to train YOLOX
+### Step 1-2: Train YOLOX on COCO
 
 [YOLOX: Exceeding YOLO Series in 2021](https://arxiv.org/abs/2107.08430)
 
