@@ -9,6 +9,9 @@ from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector
 
 import onnxruntime
+import kp
+import cv2
+import numpy as np
 
 @DETECTORS.register_module()
 class SingleStageDetector(BaseDetector):
@@ -92,6 +95,39 @@ class SingleStageDetector(BaseDetector):
 
             assert hasattr(self.bbox_head, 'get_bboxes_kn'), 'Error: None implemented kneron bbox_head forward type!'
 
+            results_list = self.bbox_head.get_bboxes_kn(
+                res, img_metas=img_metas, rescale=rescale)
+
+        elif hasattr(self, '__Kn_PLUS_Params__'):
+            tmp_img = img.cpu().detach().numpy()[0].transpose(1,2,0)
+            tmp_img *= 256
+            tmp_img += 128
+            tmp_img = tmp_img.astype(np.uint8)
+            img_bgr565 = cv2.cvtColor(src=tmp_img, code=cv2.COLOR_BGR2BGR565)
+
+            kp_params = getattr(self, '__Kn_PLUS_Params__')
+            kp.inference.generic_raw_inference_send(device_group=kp_params['device_group'],
+                                                    generic_raw_image_header=kp_params['generic_raw_image_header'],
+                                                    image=img_bgr565,
+                                                    image_format=kp.ImageFormat.KP_IMAGE_FORMAT_RGB565)
+
+            generic_raw_result = kp.inference.generic_raw_inference_receive(device_group=kp_params['device_group'],
+                                                                            generic_raw_image_header=kp_params['generic_raw_image_header'],
+                                                                            model_nef_descriptor=kp_params['model_nef_descriptor'])
+            inf_node_output_list = []
+            for node_idx in range(generic_raw_result.header.num_output_node):
+                inference_float_node_output = kp.inference.generic_inference_retrieve_float_node(node_idx=node_idx,
+                                                                                                generic_raw_result=generic_raw_result,
+                                                                                                channels_ordering=kp.ChannelOrdering.KP_CHANNEL_ORDERING_CHW
+                                                                                                )
+                inf_node_output_list.append(inference_float_node_output.ndarray.copy())
+            assert hasattr(self.bbox_head, 'get_bboxes_kn'), 'Error: None implemented kneron bbox_head forward type!'
+
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            
+            res = []
+            for o1 in inf_node_output_list:
+                res.append( torch.from_numpy(o1).float().to(device))
             results_list = self.bbox_head.get_bboxes_kn(
                 res, img_metas=img_metas, rescale=rescale)
 
