@@ -9,9 +9,14 @@ from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector
 
 import onnxruntime
-import kp
 import cv2
 import numpy as np
+try:
+    import kp
+except ImportError:
+    warnings.warn('Kneron PLUS software failed to import, see' 
+                'document(http://doc.kneron.com/docs/#plus_python/) for the installation guide')
+
 
 @DETECTORS.register_module()
 class SingleStageDetector(BaseDetector):
@@ -106,21 +111,30 @@ class SingleStageDetector(BaseDetector):
             img_bgr565 = cv2.cvtColor(src=tmp_img, code=cv2.COLOR_BGR2BGR565)
 
             kp_params = getattr(self, '__Kn_PLUS_Params__')
-            kp.inference.generic_raw_inference_send(device_group=kp_params['device_group'],
-                                                    generic_raw_image_header=kp_params['generic_raw_image_header'],
-                                                    image=img_bgr565,
-                                                    image_format=kp.ImageFormat.KP_IMAGE_FORMAT_RGB565)
+            try:
+                kp.inference.generic_raw_inference_send(device_group=kp_params['device_group'],
+                                                        generic_raw_image_header=kp_params['generic_raw_image_header'],
+                                                        image=img_bgr565,
+                                                        image_format=kp.ImageFormat.KP_IMAGE_FORMAT_RGB565)
 
-            generic_raw_result = kp.inference.generic_raw_inference_receive(device_group=kp_params['device_group'],
-                                                                            generic_raw_image_header=kp_params['generic_raw_image_header'],
-                                                                            model_nef_descriptor=kp_params['model_nef_descriptor'])
-            inf_node_output_list = []
-            for node_idx in range(generic_raw_result.header.num_output_node):
-                inference_float_node_output = kp.inference.generic_inference_retrieve_float_node(node_idx=node_idx,
-                                                                                                generic_raw_result=generic_raw_result,
-                                                                                                channels_ordering=kp.ChannelOrdering.KP_CHANNEL_ORDERING_CHW
-                                                                                                )
-                inf_node_output_list.append(inference_float_node_output.ndarray.copy())
+                generic_raw_result = kp.inference.generic_raw_inference_receive(device_group=kp_params['device_group'],
+                                                                                generic_raw_image_header=kp_params['generic_raw_image_header'],
+                                                                                model_nef_descriptor=kp_params['model_nef_descriptor'])
+                                                                                
+                inf_node_output_list = []
+                for node_idx in range(generic_raw_result.header.num_output_node):
+                    inference_float_node_output = kp.inference.generic_inference_retrieve_float_node(node_idx=node_idx,
+                                                                                                    generic_raw_result=generic_raw_result,
+                                                                                                    channels_ordering=kp.ChannelOrdering.KP_CHANNEL_ORDERING_CHW
+                                                                                                    )
+                    inf_node_output_list.append(inference_float_node_output.ndarray.copy())
+            except Exception as e:
+                raise Exception( e,
+                                        "Kneron PLUS software have something wrong."
+                                        "If Kneron PLUS software haven't been installed, please check the document: 'http://doc.kneron.com/docs/#plus_python/'. "
+                                        "If you found something unexpected, welcome to give us some feedbacks in our forum ('https://www.kneron.com/forum/') to help us make it better")
+                                                                                
+
             assert hasattr(self.bbox_head, 'get_bboxes_kn'), 'Error: None implemented kneron bbox_head forward type!'
 
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
