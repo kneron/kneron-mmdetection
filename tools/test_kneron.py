@@ -226,6 +226,35 @@ def main():
         onnx_sess = onnxruntime.InferenceSession(args.checkpoint)
         setattr(model, '__Kn_ONNX_Sess__' , onnx_sess)
         model.forward = model.forward_kneron
+    elif os.path.splitext(args.checkpoint)[-1] == '.nef':
+        try:
+            import kp
+        except:
+            warnings.warn('Kneron PLUS software failed to import, see'
+                                    'the document(http://doc.kneron.com/docs/#plus_python/) for the installation guide')
+
+        # Use first scaned kneron usb dongle
+        device_group = kp.core.connect_devices(usb_port_ids=[0])
+
+        # Load model
+        model_nef_descriptor = kp.core.load_model_from_file(device_group=device_group,
+                                                                    file_path=args.checkpoint)
+
+        # Generate preprocess setting for PLUS
+        generic_raw_image_header = kp.GenericRawImageHeader(
+            model_id=model_nef_descriptor.models[0].id,
+            resize_mode=kp.ResizeMode.KP_RESIZE_ENABLE,
+            padding_mode=kp.PaddingMode.KP_PADDING_CORNER,
+            normalize_mode=kp.NormalizeMode.KP_NORMALIZE_KNERON,
+            inference_number=0
+        )
+        kp_params = {
+            'device_group' : device_group,
+            'model_nef_descriptor': model_nef_descriptor,
+            'generic_raw_image_header': generic_raw_image_header
+        }
+        setattr(model, '__Kn_PLUS_Params__' , kp_params)
+        model.forward = model.forward_kneron
 
     if not distributed:
         model = MMDataParallel(model, device_ids=cfg.gpu_ids)
