@@ -157,7 +157,18 @@ def inference_detector(model, imgs):
     else:
         return results
 
-def inference_detector_kn(model, imgs, onnx_model_sess):
+def set_kn_param_to_model_for_kn_inference_mode(model, onnx_model_sess = None, kneron_plus_params = None):
+    if hasattr(model, '__Kn_ONNX_Sess__'):
+        delattr(model, '__Kn_ONNX_Sess__')
+    if hasattr(model, '__Kn_PLUS_Params__'):
+        delattr(model, '__Kn_PLUS_Params__')
+
+    if onnx_model_sess != None:
+        setattr(model, '__Kn_ONNX_Sess__' , onnx_model_sess)
+    elif kneron_plus_params != None:
+        setattr(model, '__Kn_PLUS_Params__' , kneron_plus_params)
+
+def inference_detector_kn(model, imgs, onnx_model_sess = None, kneron_plus_params = None):
     """Inference image(s) with the detector.
 
     Args:
@@ -189,7 +200,11 @@ def inference_detector_kn(model, imgs, onnx_model_sess):
 
     assert hasattr(model, 'forward_kneron'), 'Error: None implemented kneron forward type!'
 
-    setattr(model, '__Kn_ONNX_Sess__' , onnx_model_sess)
+    if onnx_model_sess != None:
+        set_kn_param_to_model_for_kn_inference_mode(model, onnx_model_sess = onnx_model_sess)
+    elif kneron_plus_params != None:
+        set_kn_param_to_model_for_kn_inference_mode(model, kneron_plus_params = kneron_plus_params)
+        
     model.forward = model.forward_kneron
 
     datas = []
