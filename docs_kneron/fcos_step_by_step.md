@@ -31,8 +31,8 @@ If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
 2. Clone the Kneron-version MMDetection (MMDetectionKN) repository.
 
     ```bash
-    git clone https://github.com/kneron/AI_Training_mmDetection.git
-    cd AI_Training_mmDetection
+    git clone https://github.com/kneron/MMDetectionKN
+    cd MMDetectionKN
     ```
 
 3. Install required python packages for building MMDetectionKN and then install MMDetectionKN.
