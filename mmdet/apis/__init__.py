@@ -1,3 +1,4 @@
+# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
 # Copyright (c) OpenMMLab. All rights reserved.
 from .inference import (async_inference_detector, inference_detector, inference_detector_kn,
                         init_detector, show_result_pyplot)
