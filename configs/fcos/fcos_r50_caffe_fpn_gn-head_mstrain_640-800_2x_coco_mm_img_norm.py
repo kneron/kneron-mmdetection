@@ -15,7 +15,7 @@ model = dict(
         norm_eval=True,
         style='pytorch',
         init_cfg=dict(type='Pretrained', 
-        checkpoint='/data2/doris/mmclassification20220317/work_dirs/resnet50_8xb32_in1k_img_norm/epoch_100_c.pth'
+        checkpoint='pretrained/resnet50.pth'
         )), 
     neck=dict(
         type='FPN',

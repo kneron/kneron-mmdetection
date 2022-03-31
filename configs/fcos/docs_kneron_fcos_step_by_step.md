@@ -79,7 +79,19 @@ mmdetection
 
 It's recommended to *symlink* the dataset folder to mmdetection folder. However, if you place your dataset folder at different place and do not want to symlink, you have to change the corresponding paths in config files (absolute path is recommended).
 
-### Step 1-2: Train FCOS on COCO
+
+### Step 1-2: Put pretrained resnet50
+
+```bash
+mkdir pretrained
+cd work_dirs
+wget https://github.com/kneron/Model_Zoo/raw/main/mmdetection/fcos/latest.zip
+unzip latest.zip
+mv pretrained_resnet50/resnet50.pth .
+cd ..
+```
+
+### Step 1-3: Train FCOS on COCO
 
 [FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355)
 
