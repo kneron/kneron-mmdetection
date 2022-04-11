@@ -1,4 +1,4 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 import os.path as osp
@@ -13,6 +13,7 @@ from mmcv import Config, DictAction
 from mmdet.core.export import build_model_from_cfg, preprocess_example_input
 from mmdet.core.export.model_wrappers import ONNXRuntimeDetector
 
+import onnxoptimizer
 #from onnx import optimizer
 from optimizer_scripts.tools import eliminating
 from optimizer_scripts.tools import fusing
@@ -20,6 +21,18 @@ from optimizer_scripts.tools import replacing
 from optimizer_scripts.tools import other
 from optimizer_scripts.tools import combo
 from optimizer_scripts.tools import special
+
+
+def polish_model(model):
+    '''
+    This function combines several useful utility functions together.
+    '''
+    onnx.checker.check_model(model)
+    onnx.helper.strip_doc_string(model)
+    model = onnx.shape_inference.infer_shapes(model)
+    model = onnxoptimizer.optimize(model)
+    onnx.checker.check_model(model)
+    return model
 
 
 def torch_exported_onnx_flow(m: onnx.ModelProto, disable_fuse_bn=False) -> onnx.ModelProto:
@@ -105,11 +118,11 @@ def pytorch2onnx(model,
         m = onnx.load(output_file)
         print(len(m.graph.input))
         m = torch_exported_onnx_flow(m, disable_fuse_bn = False)
-        
+
         if len(m.graph.input) > 1:
             raise ValueError(" '--pixel-bias-value' and '--pixel-scale-value' only support one input node model currently")
 
-        if in_model_preprocess is True:
+        if in_model_preprocess:
             #####  add BN for doing input data normalization  #####
             print("#####  add BN for doing input data normalization  #####")
 
@@ -124,13 +137,63 @@ def pytorch2onnx(model,
             normalize_bn_bias = [ -1*mean[0]/std[0] + 128.0/std[0], -1*mean[1]/std[1] + 128.0/std[1], -1*mean[2]/std[2] + 128.0/std[2]] 
             normalize_bn_scale = [1/std[0], 1/std[1], 1/std[2]]
 
-            other.add_shift_scale_bn_after(m.graph, i_n.name, normalize_bn_bias, normalize_bn_scale)
-            m = onnx.utils.polish_model(m)
+            # other.add_shift_scale_bn_after(m.graph, i_n.name, normalize_bn_bias, normalize_bn_scale)
+            other.add_bias_scale_bn_after(m.graph, i_n.name, normalize_bn_bias, normalize_bn_scale)
+            m = polish_model(m)
 
         onnx_out = output_file
         onnx.helper.set_model_props(m, {'Kn. T.P. version': " MMDetection_KN v0.1.0" , 'in-model-preproc': str(in_model_preprocess)})
         onnx.save(m, onnx_out)
         print("exported success: ", onnx_out)
+
+        if verify:
+            import onnxruntime as ort
+            onnx_model = onnx.load(output_file)
+            onnx.checker.check_model(onnx_model)
+            with torch.no_grad():
+                if in_model_preprocess:
+                    bn = torch.nn.BatchNorm2d(3)
+                    bn.weight[:] = torch.as_tensor(
+                        normalize_bn_scale, dtype=bn.weight.dtype
+                    )
+                    bn.bias[:] = torch.as_tensor(
+                        normalize_bn_bias, dtype=bn.bias.dtype
+                    )
+                    model = torch.nn.Sequential(bn, model).eval()
+
+                pth_outs = model(one_img)
+
+                def recursive_numpy(ctxs):
+                    if isinstance(ctxs, torch.Tensor):
+                        return ctxs.numpy()
+                    ctxs = [recursive_numpy(ctx) for ctx in ctxs]
+                    return ctxs
+
+                pth_outs = recursive_numpy(pth_outs)
+
+                # NOTE: flatten if nested structure
+                if not isinstance(pth_outs[0], torch.Tensor):
+                    pth_outs = [pth_out for _ in pth_outs for pth_out in _]
+
+            input_all = [node.name for node in onnx_model.graph.input]
+            input_initializer = [
+                node.name for node in onnx_model.graph.initializer
+            ]
+            net_feed_input = list(set(input_all) - set(input_initializer))
+            assert (len(net_feed_input) == 1)
+            sess = ort.InferenceSession(
+                output_file, providers=['CPUExecutionProvider']
+            )
+            ort_outs = sess.run(
+                None, {net_feed_input[0]: one_img.detach().numpy()})
+            err_msg = 'The numerical values are different between Pytorch' + \
+                      ' and ONNX, but it does not necessarily mean the' + \
+                      ' exported ONNX model is problematic.'
+            for ort_out, pth_out in zip(ort_outs, pth_outs):
+                np.testing.assert_allclose(
+                    ort_out, pth_out, rtol=1e-02, atol=1e-04, err_msg=err_msg
+                )
+            print('The numerical values are the same between Pytorch and ONNX')
 
         return
 
@@ -357,8 +420,9 @@ def parse_args():
     parser.add_argument(
         '--in-model-preprocess',
         action='store_true',
-        help='Add batchnormalization layer in front of model as a role of data preprocessing(noramlization)  '
-        ' according to the normalization value in config. ')
+        help='Add batchnormalization layer in front of model as a role of '
+             'data preprocessing (noramlization) according to the '
+             'normalization value in config. ')
     args = parser.parse_args()
     return args
 
@@ -415,4 +479,3 @@ if __name__ == '__main__':
         dynamic_export=args.dynamic_export,
         skip_postprocess=args.skip_postprocess,
         in_model_preprocess = args.in_model_preprocess)
-
