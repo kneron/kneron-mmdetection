@@ -99,7 +99,7 @@ def pytorch2onnx(
 
         if in_model_preprocess:
             print(
-                "adding BN for doing input data normalization".center("-", 80)
+                "adding BN for doing input data normalization".center(79, '-')
             )
 
             mean = normalize_cfg["mean"]
