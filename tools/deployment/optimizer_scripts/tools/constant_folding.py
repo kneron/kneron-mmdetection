@@ -2,17 +2,17 @@ import onnx.utils
 import onnx
 import numpy as np
 import logging
+import traceback
 
 from . import helper
-from .general_graph import Graph, Node
 from .other import topological_sort
-from .replacing import replace_shape_with_constant
+from .helper import logger
 
 
 def are_all_inputs_Constant_with_one_child(g, node):
     for input_name in node.input:
         input_node = helper.find_node_by_output_name(g, input_name)
-        if input_node is None or input_node.op_type != 'Constant':
+        if input_node is None or input_node.op_type != "Constant":
             return False
         relative_outputs = helper.find_nodes_by_input_name(g, input_name)
         if len(relative_outputs) > 1:
@@ -26,43 +26,58 @@ def constant_folding(g):
     :param g: The onnx GraphProto\\
     :return: If any node is folded, return True. Otherwise, return False.
     """
-    # Before constant folding, duplicate the constant nodes.
-    duplicate_constant_node(g)
     keep_folding = True  # Keep the while loop
-    folded = False      # Return value
-    while keep_folding:
-        keep_folding = False
-        for node in g.node:
-            # Check if the node is foldable
-            if node.op_type not in constant_folding_nodes.keys():
-                continue
-            # Check if the parents of the node are all single follower constant node.
-            if not are_all_inputs_Constant_with_one_child(g, node):
-                continue
-            # Constant folding for the specific node
-            if constant_folding_nodes[node.op_type](g, node):
-                logging.debug("Constant nodes and %s %s are folded.",
-                              node.op_type, node.name)
-                folded = True
-                keep_folding = True
-            else:
-                logging.debug(
-                    "Constant nodes and %s %s are skipped.", node.op_type, node.name)
+    folded = False  # Return value
+    try:
+        # Before constant folding, duplicate the constant nodes.
+        duplicate_constant_node(g)
+        while keep_folding:
+            keep_folding = False
+            for node in g.node:
+                # Check if the node is foldable
+                if node.op_type not in constant_folding_nodes.keys():
+                    continue
+                # Check if parents of the node are all
+                # single follower constant node.
+                if not are_all_inputs_Constant_with_one_child(g, node):
+                    continue
+                # Constant folding for the specific node
+                if constant_folding_nodes[node.op_type](g, node):
+                    logging.debug(
+                        "Constant nodes and %s %s are folded.",
+                        node.op_type,
+                        node.name,
+                    )
+                    folded = True
+                    keep_folding = True
+                else:
+                    logging.debug(
+                        "Constant nodes and %s %s are skipped.",
+                        node.op_type,
+                        node.name,
+                    )
+    except Exception:
+        logger.error("An exception is raised while constant folding.")
+        logger.error(traceback.format_exc())
     return folded
 
 
 def duplicate_constant_node(g):
-    """ Duplicate the constant node if its following nodes contain constant folding
-    nodes. Create and link the new constant nodes to the constant folding nodes.
+    """
+    Duplicate the constant node if its following nodes contain
+    constant folding nodes. Create and link the new constant nodes
+    to the constant folding nodes.
     """
     for node in g.node:
         # Find a valid constant node
-        if node.op_type != 'Constant':
+        if node.op_type != "Constant":
             continue
         output_val_info = helper.find_value_by_name(g, node.output[0])
         if output_val_info is None:
-            print("Cannot inference the shape of Const node output: " +
-                  node.output[0])
+            print(
+                "Cannot inference the shape of Const node output: "
+                + node.output[0]
+            )
             exit(1)
         data_shape = helper.get_shape_from_value_info(output_val_info)
         output_nodes = helper.find_nodes_by_input_name(g, node.output[0])
@@ -72,30 +87,37 @@ def duplicate_constant_node(g):
             continue
 
         # Check if its following nodes are foldable
-        foldable_output_nodes = list(filter(lambda n: n.op_type in
-                                            constant_folding_nodes.keys(), output_nodes))
+        foldable_output_nodes = list(
+            filter(
+                lambda n: n.op_type in constant_folding_nodes.keys(),
+                output_nodes,
+            )
+        )
         if not foldable_output_nodes:
             continue
 
         # Duplicate the node needed by foldable nodes
         for i in range(len(foldable_output_nodes)):
-            logging.debug("Found constant %s and %s %s are availble for folding. Duplicate constant.",
-                          node.name, foldable_output_nodes[i].op_type, foldable_output_nodes[i].name)
-            output_name = node.output[0] + '_dup_' + str(i)
+            logging.debug(
+                f"Found constant {node.name} and "
+                f"{foldable_output_nodes[i].op_type} "
+                f"{foldable_output_nodes[i].name} are availble for folding. "
+                "Duplicate constant.",
+            )
+            output_name = node.output[0] + "_dup_" + str(i)
             new_constant_node = onnx.helper.make_node(
-                'Constant',
+                "Constant",
                 [],
                 [output_name],
                 name=output_name,
-                value=node.attribute[0].t
+                value=node.attribute[0].t,
             )
             new_val_info = onnx.helper.make_tensor_value_info(
-                output_name,
-                node.attribute[0].t.data_type,
-                data_shape
+                output_name, node.attribute[0].t.data_type, data_shape
             )
             input_ind = list(foldable_output_nodes[i].input).index(
-                node.output[0])
+                node.output[0]
+            )
             foldable_output_nodes[i].input[input_ind] = output_name
 
             g.node.extend([new_constant_node])
@@ -110,6 +132,7 @@ def duplicate_constant_node(g):
 
     return
 
+
 def slice_constant_folding(g, node):
     op_version = helper.get_current_opset_version()
     # only support opset 9 & 11
@@ -118,9 +141,9 @@ def slice_constant_folding(g, node):
     elif op_version == 9:
         return slice_constant_folding_Opset_9(g, node)
 
+
 def slice_constant_folding_Opset_11(g, node):
-    """ Fold constant and slice nodes to a single constant node.
-    """
+    """Fold constant and slice nodes to a single constant node."""
     pre_node = helper.find_node_by_output_name(g, node.input[0])
     pre_shape, data_list = helper.constant_to_list(pre_node)
 
@@ -130,19 +153,25 @@ def slice_constant_folding_Opset_11(g, node):
     ends_node = helper.find_node_by_output_name(g, node.input[2])
     _, ends = helper.constant_to_list(ends_node)
 
-
-    axes_node = None if len(node.input) <= 3 else helper.find_node_by_output_name(g, node.input[3])
+    axes_node = (
+        None
+        if len(node.input) <= 3
+        else helper.find_node_by_output_name(g, node.input[3])
+    )
     if not axes_node:
         axes = list(range(len(helper.get_shape(data_list))))
     else:
         _, axes = helper.constant_to_list(axes_node)
 
-    steps_node = None if len(node.input) <= 4 else helper.find_node_by_output_name(g, node.input[4])
+    steps_node = (
+        None
+        if len(node.input) <= 4
+        else helper.find_node_by_output_name(g, node.input[4])
+    )
     if not steps_node:
-        steps = [1]*len(helper.get_shape(data_list))
+        steps = [1] * len(helper.get_shape(data_list))
     else:
         _, steps = helper.constant_to_list(steps_node)
-
 
     data_list = list(map(int, data_list))
     starts = list(map(int, starts))
@@ -154,10 +183,15 @@ def slice_constant_folding_Opset_11(g, node):
 
     new_data = None
     for idx, _ in enumerate(axes):
-        new_data = np.apply_along_axis( lambda x: x[starts[idx] : ends[idx] : steps[idx]], idx, data_list )
+        new_data = np.apply_along_axis(
+            lambda x: x[starts[idx]:ends[idx]:steps[idx]], idx, data_list
+        )
 
-    new_node = helper.list_to_constant(node.output[0], helper.get_shape(
-        new_data), helper.flatten_to_list(new_data))
+    new_node = helper.list_to_constant(
+        node.output[0],
+        helper.get_shape(new_data),
+        helper.flatten_to_list(new_data),
+    )
     g.node.extend([new_node])
     value_info = helper.find_value_by_name(g, pre_node.output[0])
     if value_info is not None:
@@ -167,16 +201,16 @@ def slice_constant_folding_Opset_11(g, node):
 
     return True
 
+
 def slice_constant_folding_Opset_9(g, node):
-    """ Fold constant and slice nodes to a single constant node.
-    """
+    """Fold constant and slice nodes to a single constant node."""
     pre_node = helper.find_node_by_output_name(g, node.input[0])
     pre_shape, data_list = helper.constant_to_list(pre_node)
 
     data_list = np.reshape(data_list, pre_shape)
-    axes = helper.get_attribute_by_name(node, 'axes')
-    ends = list(helper.get_attribute_by_name(node, 'ends').ints)
-    starts = list(helper.get_attribute_by_name(node, 'starts').ints)
+    axes = helper.get_attribute_by_name(node, "axes")
+    ends = list(helper.get_attribute_by_name(node, "ends").ints)
+    starts = list(helper.get_attribute_by_name(node, "starts").ints)
 
     if not axes:
         axes = list(range(len(helper.get_shape(data_list))))
@@ -184,8 +218,11 @@ def slice_constant_folding_Opset_9(g, node):
         axes = list(axes.ints)
 
     new_data = helper.slice_data(data_list, starts, ends, axes)
-    new_node = helper.list_to_constant(node.output[0], helper.get_shape(
-        new_data), helper.flatten_to_list(new_data))
+    new_node = helper.list_to_constant(
+        node.output[0],
+        helper.get_shape(new_data),
+        helper.flatten_to_list(new_data),
+    )
     g.node.extend([new_node])
     value_info = helper.find_value_by_name(g, pre_node.output[0])
     if value_info is not None:
@@ -195,9 +232,9 @@ def slice_constant_folding_Opset_9(g, node):
 
     return True
 
+
 def cast_constant_folding(g, node):
-    """ Fold constant and cast node to a single constant node.
-    """
+    """Fold constant and cast node to a single constant node."""
     pre_node = helper.find_node_by_output_name(g, node.input[0])
     shape, data = helper.constant_to_list(pre_node)
     data_type = node.attribute[0].i
@@ -206,28 +243,24 @@ def cast_constant_folding(g, node):
     elif data_type == onnx.helper.TensorProto.FLOAT:
         data = list(map(float, data))
     else:
-        raise RuntimeError('data type not supported')
+        raise RuntimeError("data type not supported")
 
     if shape == 1:
         tensor = onnx.helper.make_tensor(
             name=pre_node.attribute[0].name,
             data_type=data_type,
             dims=[],
-            vals=data
+            vals=data,
         )
     else:
         tensor = onnx.helper.make_tensor(
             name=pre_node.attribute[0].name,
             data_type=data_type,
             dims=shape,
-            vals=helper.flatten_to_list(data)
+            vals=helper.flatten_to_list(data),
         )
     new_node = onnx.helper.make_node(
-        'Constant',
-        [],
-        [node.output[0]],
-        name=node.output[0],
-        value=tensor
+        "Constant", [], [node.output[0]], name=node.output[0], value=tensor
     )
     g.node.extend([new_node])
 
@@ -244,15 +277,14 @@ def cast_constant_folding(g, node):
 
 
 def reduceprod_constant_folding(g, node):
-    """ Fold constant and reduceprod nodes to a single constant node.
-    """
+    """Fold constant and reduceprod nodes to a single constant node."""
     pre_node = helper.find_node_by_output_name(g, node.input[0])
     shape, data_set = helper.constant_to_list(pre_node)
     tensor = pre_node.attribute[0].t
 
     data_set = np.reshape(data_set, shape)
     for att in node.attribute:
-        if att.name == 'axes':
+        if att.name == "axes":
             axes = list(att.ints)
         else:
             keepdims = int(att.i)
@@ -264,14 +296,10 @@ def reduceprod_constant_folding(g, node):
         name=node.output[0],
         data_type=tensor.data_type,
         dims=new_shape,
-        vals=new_flat_data
+        vals=new_flat_data,
     )
     new_node = onnx.helper.make_node(
-        'Constant',
-        [],
-        [node.output[0]],
-        name=node.output[0],
-        value=new_tensor
+        "Constant", [], [node.output[0]], name=node.output[0], value=new_tensor
     )
 
     g.node.extend([new_node])
@@ -288,8 +316,7 @@ def reduceprod_constant_folding(g, node):
 
 
 def reshape_constant_input_folding(g, node):
-    """ Fold constant and reshape nodes to a single constant node.
-    """
+    """Fold constant and reshape nodes to a single constant node."""
     pre_data_node = helper.find_node_by_output_name(g, node.input[0])
     pre_shape_node = helper.find_node_by_output_name(g, node.input[1])
 
@@ -301,14 +328,10 @@ def reshape_constant_input_folding(g, node):
         name=node.output[0],
         data_type=pre_data_node.attribute[0].t.data_type,
         dims=new_data.shape,
-        vals=helper.flatten_to_list(new_data)
+        vals=helper.flatten_to_list(new_data),
     )
     new_node = onnx.helper.make_node(
-        'Constant',
-        [],
-        [node.output[0]],
-        name=node.output[0],
-        value=new_tensor
+        "Constant", [], [node.output[0]], name=node.output[0], value=new_tensor
     )
     g.node.extend([new_node])
 
@@ -326,8 +349,7 @@ def reshape_constant_input_folding(g, node):
 
 
 def concat_constant_folding(g, node):
-    """ Fold constant and concat nodes to a single constant node.
-    """
+    """Fold constant and concat nodes to a single constant node."""
     node_to_del = []
     valid_inputs = True
     for input_name in node.input:
@@ -336,7 +358,7 @@ def concat_constant_folding(g, node):
         if len(input_node_output) > 1:
             valid_inputs = False
             break
-        if input_node.op_type != 'Constant':
+        if input_node.op_type != "Constant":
             valid_inputs = False
             break
 
@@ -364,7 +386,7 @@ def concat_constant_folding(g, node):
         node.output[0],
         helper.get_shape(concat_data),
         helper.flatten_to_list(concat_data),
-        data_type=node_data_type
+        data_type=node_data_type,
     )
     g.node.extend([new_node])
     node_to_del.append(node)
@@ -382,8 +404,7 @@ def concat_constant_folding(g, node):
 
 
 def transpose_constant_folding(g, node):
-    """Fold constant and transpose nodes to a single constant node.
-    """
+    """Fold constant and transpose nodes to a single constant node."""
     node_to_del = []
     pre_node = helper.find_node_by_output_name(g, node.input[0])
     shape, data = helper.constant_to_list(pre_node)
@@ -396,7 +417,7 @@ def transpose_constant_folding(g, node):
         node.output[0],
         new_shape,
         new_data.flatten().tolist(),
-        data_type=pre_node.attribute[0].t.data_type
+        data_type=pre_node.attribute[0].t.data_type,
     )
 
     g.node.extend([new_node])
@@ -409,9 +430,7 @@ def transpose_constant_folding(g, node):
     g.value_info.remove(next_val_info)
 
     new_val_info = onnx.helper.make_tensor_value_info(
-        node.output[0],
-        pre_node.attribute[0].t.data_type,
-        new_shape
+        node.output[0], pre_node.attribute[0].t.data_type, new_shape
     )
     g.value_info.extend([new_val_info])
 
@@ -424,8 +443,7 @@ def transpose_constant_folding(g, node):
 
 
 def unsqueeze_constant_folding(g, node):
-    """Fold constant and unsqueeze nodes to a single constant node.
-    """
+    """Fold constant and unsqueeze nodes to a single constant node."""
     node_to_del = []
     pre_node = helper.find_node_by_output_name(g, node.input[0])
     shape, data = helper.constant_to_list(pre_node)
@@ -443,7 +461,7 @@ def unsqueeze_constant_folding(g, node):
         node.output[0],
         new_shape,
         np_data.flatten().tolist(),
-        data_type=pre_node.attribute[0].t.data_type
+        data_type=pre_node.attribute[0].t.data_type,
     )
     g.node.extend([new_node])
     node_to_del.extend([node, pre_node])
@@ -458,9 +476,7 @@ def unsqueeze_constant_folding(g, node):
         g.value_info.remove(next_val_info)
 
     new_val_info = onnx.helper.make_tensor_value_info(
-        node.output[0],
-        pre_node.attribute[0].t.data_type,
-        new_shape
+        node.output[0], pre_node.attribute[0].t.data_type, new_shape
     )
     g.value_info.extend([new_val_info])
 
@@ -472,8 +488,7 @@ def unsqueeze_constant_folding(g, node):
 
 
 def gather_constant_folding(g, node):
-    """Fold constant and gather nodes to a single constant node.
-    """
+    """Fold constant and gather nodes to a single constant node."""
     node_to_del = []
 
     pre_data_node = helper.find_node_by_output_name(g, node.input[0])
@@ -485,7 +500,10 @@ def gather_constant_folding(g, node):
         indices = indices[0]
 
     np_data = np.reshape(data, shape)
-    axis = node.attribute[0].i
+    if len(node.attribute) < 1:
+        axis = 0
+    else:
+        axis = node.attribute[0].i
 
     new_data = np.take(np_data, indices, axis=axis)
     new_shape = new_data.shape
@@ -493,7 +511,7 @@ def gather_constant_folding(g, node):
         node.output[0],
         new_shape,
         new_data.flatten().tolist(),
-        data_type=pre_data_node.attribute[0].t.data_type
+        data_type=pre_data_node.attribute[0].t.data_type,
     )
 
     node_to_del.extend([node, pre_data_node, pre_indices_node])
@@ -503,14 +521,15 @@ def gather_constant_folding(g, node):
     val_info_2 = helper.find_value_by_name(g, node.input[1])
     val_info_3 = helper.find_value_by_name(g, node.output[0])
     new_val_info = onnx.helper.make_tensor_value_info(
-        new_node.output[0],
-        pre_data_node.attribute[0].t.data_type,
-        new_shape
+        new_node.output[0], pre_data_node.attribute[0].t.data_type, new_shape
     )
 
-    g.value_info.remove(val_info_1)
-    g.value_info.remove(val_info_2)
-    g.value_info.remove(val_info_3)
+    if val_info_1 is not None:
+        g.value_info.remove(val_info_1)
+    if val_info_2 is not None:
+        g.value_info.remove(val_info_2)
+    if val_info_3 is not None:
+        g.value_info.remove(val_info_3)
     g.value_info.extend([new_val_info])
 
     while node_to_del:
@@ -521,8 +540,7 @@ def gather_constant_folding(g, node):
 
 
 def add_constant_folding(g, node):
-    """Fold constant and add nodes to a single constant node.
-    """
+    """Fold constant and add nodes to a single constant node."""
     node_to_del = []
     pre_node_1 = helper.find_node_by_output_name(g, node.input[0])
     pre_node_2 = helper.find_node_by_output_name(g, node.input[1])
@@ -535,14 +553,14 @@ def add_constant_folding(g, node):
     np_data2 = np.reshape(data2, shape2)
     try:
         new_data = np.add(np_data1, np_data2)
-    except:
-        raise RuntimeError('can\'t broadcast and add two data sets')
+    except Exception:
+        raise RuntimeError("can't broadcast and add two data sets")
 
     new_node = helper.list_to_constant(
         node.output[0],
         new_data.shape,
         new_data.flatten().tolist(),
-        data_type=pre_node_1.attribute[0].t.data_type
+        data_type=pre_node_1.attribute[0].t.data_type,
     )
 
     g.node.extend([new_node])
@@ -559,8 +577,7 @@ def add_constant_folding(g, node):
 
 
 def sqrt_constant_folding(g, node):
-    """ Fold constant and sqrt nodes to a single node.
-    """
+    """Fold constant and sqrt nodes to a single node."""
     node_to_del = []
     pre_node = helper.find_node_by_output_name(g, node.input[0])
     shape, data = helper.constant_to_list(pre_node)
@@ -570,17 +587,13 @@ def sqrt_constant_folding(g, node):
     data_type = output_val_info.type.tensor_type.elem_type
 
     new_tensor = onnx.helper.make_tensor(
-        name=node.output[0]+'_data',
+        name=node.output[0] + "_data",
         data_type=data_type,
         dims=shape,
-        vals=np_data.flatten().tolist()
+        vals=np_data.flatten().tolist(),
     )
     new_node = onnx.helper.make_node(
-        'Constant',
-        [],
-        [node.output[0]],
-        name=node.output[0],
-        value=new_tensor
+        "Constant", [], [node.output[0]], name=node.output[0], value=new_tensor
     )
 
     g.value_info.remove(input_val_info)
@@ -595,13 +608,12 @@ def sqrt_constant_folding(g, node):
 
 
 def reciprocal_constant_folding(g, node):
-    """ Fold constant and reciprocal nodes to a single constant node.
-    """
+    """Fold constant and reciprocal nodes to a single constant node."""
     node_to_del = []
 
     pre_node = helper.find_node_by_output_name(g, node.input[0])
     shape, data = helper.constant_to_list(pre_node)
-    data = list(map(lambda x: x if abs(x) > 1.e-8 else 1.e-8, data))
+    data = list(map(lambda x: x if abs(x) > 1.0e-8 else 1.0e-8, data))
     np_data = np.reshape(data, shape)
     np_data = np.reciprocal(np_data)
 
@@ -610,17 +622,13 @@ def reciprocal_constant_folding(g, node):
     data_type = output_val_info.type.tensor_type.elem_type
 
     new_tensor = onnx.helper.make_tensor(
-        name=node.output[0]+'_data',
+        name=node.output[0] + "_data",
         data_type=data_type,
         dims=shape,
-        vals=np_data.flatten().tolist()
+        vals=np_data.flatten().tolist(),
     )
     new_node = onnx.helper.make_node(
-        'Constant',
-        [],
-        [node.output[0]],
-        name=node.output[0],
-        value=new_tensor
+        "Constant", [], [node.output[0]], name=node.output[0], value=new_tensor
     )
 
     node_to_del.extend([node, pre_node])
@@ -636,8 +644,7 @@ def reciprocal_constant_folding(g, node):
 
 
 def mul_constant_folding(g, node):
-    """ Fold constant and mul nodes to a single constant node.
-    """
+    """Fold constant and mul nodes to a single constant node."""
     node_to_del = []
     pre_node_1 = helper.find_node_by_output_name(g, node.input[0])
     pre_node_2 = helper.find_node_by_output_name(g, node.input[1])
@@ -654,8 +661,8 @@ def mul_constant_folding(g, node):
 
     try:
         new_data = np.multiply(np_data1, np_data2)
-    except:
-        raise RuntimeError('can not broadcast and multiply two data sets')
+    except Exception:
+        raise RuntimeError("can not broadcast and multiply two data sets")
 
     # Special shape for single element.
     if shape1 == 1 and shape2 == 1:
@@ -664,17 +671,13 @@ def mul_constant_folding(g, node):
         new_shape = new_data.shape
 
     new_tensor = onnx.helper.make_tensor(
-        name=node.output[0]+'_data',
+        name=node.output[0] + "_data",
         data_type=pre_node_1.attribute[0].t.data_type,
         dims=new_shape,
-        vals=new_data.flatten().tolist()
+        vals=new_data.flatten().tolist(),
     )
     new_node = onnx.helper.make_node(
-        'Constant',
-        [],
-        [node.output[0]],
-        name=node.output[0],
-        value=new_tensor
+        "Constant", [], [node.output[0]], name=node.output[0], value=new_tensor
     )
 
     node_to_del.extend([node, pre_node_1, pre_node_2])
@@ -691,8 +694,7 @@ def mul_constant_folding(g, node):
 
 
 def div_constant_folding(g, node):
-    """ Fold constant and mul nodes to a single constant node.
-    """
+    """Fold constant and mul nodes to a single constant node."""
     node_to_del = []
     pre_node_1 = helper.find_node_by_output_name(g, node.input[0])
     pre_node_2 = helper.find_node_by_output_name(g, node.input[1])
@@ -709,8 +711,8 @@ def div_constant_folding(g, node):
 
     try:
         new_data = np.divide(np_data1, np_data2)
-    except:
-        raise RuntimeError('can not broadcast and multiply two data sets')
+    except Exception:
+        raise RuntimeError("can not broadcast and multiply two data sets")
 
     # Special shape for single element.
     if shape1 == 1 and shape2 == 1:
@@ -720,20 +722,16 @@ def div_constant_folding(g, node):
 
     # Check data type if it is int
     if pre_node_1.attribute[0].t.data_type == 7:
-        new_data = new_data.astype('int64')
+        new_data = new_data.astype("int64")
 
     new_tensor = onnx.helper.make_tensor(
-        name=node.output[0]+'_data',
+        name=node.output[0] + "_data",
         data_type=pre_node_1.attribute[0].t.data_type,
         dims=new_shape,
-        vals=new_data.flatten().tolist()
+        vals=new_data.flatten().tolist(),
     )
     new_node = onnx.helper.make_node(
-        'Constant',
-        [],
-        [node.output[0]],
-        name=node.output[0],
-        value=new_tensor
+        "Constant", [], [node.output[0]], name=node.output[0], value=new_tensor
     )
 
     node_to_del.extend([node, pre_node_1, pre_node_2])
@@ -750,8 +748,7 @@ def div_constant_folding(g, node):
 
 
 def sub_constant_folding(g, node):
-    """ Fold constant and sub nodes to a single node.
-    """
+    """Fold constant and sub nodes to a single node."""
     node_to_del = []
     pre_node_1 = helper.find_node_by_output_name(g, node.input[0])
     pre_node_2 = helper.find_node_by_output_name(g, node.input[1])
@@ -769,17 +766,13 @@ def sub_constant_folding(g, node):
         new_shape = new_data.shape
 
     new_tensor = onnx.helper.make_tensor(
-        name=node.output[0]+'_data',
+        name=node.output[0] + "_data",
         data_type=pre_node_1.attribute[0].t.data_type,
         dims=new_shape,
-        vals=helper.flatten_to_list(new_data)
+        vals=helper.flatten_to_list(new_data),
     )
     new_node = onnx.helper.make_node(
-        'Constant',
-        [],
-        [node.output[0]],
-        name=node.output[0],
-        value=new_tensor
+        "Constant", [], [node.output[0]], name=node.output[0], value=new_tensor
     )
 
     g.node.extend([new_node])
@@ -803,17 +796,13 @@ def neg_constant_folding(g, node):
     new_data_list = [-num for num in data_list]
 
     new_tensor = onnx.helper.make_tensor(
-        name=pre_node.name+'_neg_tensor',
+        name=pre_node.name + "_neg_tensor",
         data_type=pre_node.attribute[0].t.data_type,
         dims=shape,
-        vals=new_data_list
+        vals=new_data_list,
     )
     new_node = onnx.helper.make_node(
-        'Constant',
-        [],
-        [node.output[0]],
-        name=node.output[0],
-        value=new_tensor
+        "Constant", [], [node.output[0]], name=node.output[0], value=new_tensor
     )
 
     g.node.extend([new_node])
@@ -839,17 +828,13 @@ def floor_constant_folding(g, node):
         new_shape = shape
 
     new_tensor = onnx.helper.make_tensor(
-        name=node.output[0]+'_data',
+        name=node.output[0] + "_data",
         data_type=pre_node.attribute[0].t.data_type,
         dims=new_shape,
-        vals=helper.flatten_to_list(new_data)
+        vals=helper.flatten_to_list(new_data),
     )
     new_node = onnx.helper.make_node(
-        'Constant',
-        [],
-        [node.output[0]],
-        name=node.output[0],
-        value=new_tensor
+        "Constant", [], [node.output[0]], name=node.output[0], value=new_tensor
     )
 
     g.node.extend([new_node])
@@ -865,8 +850,7 @@ def floor_constant_folding(g, node):
 
 
 def bn_constant_folding(g, node):
-    """ Fold constant and mul nodes to a single constant node.
-    """
+    """Fold constant and mul nodes to a single constant node."""
     # Prepare data
     node_to_del = []
     input_node = helper.find_node_by_output_name(g, node.input[0])
@@ -888,17 +872,71 @@ def bn_constant_folding(g, node):
     mean_data = helper.constant_to_numpy(mean_node)
     var_data = helper.constant_to_numpy(var_node)
 
-    epsilon = helper.get_var_attribute_by_name(node, 'epsilon', 'float')
+    epsilon = helper.get_var_attribute_by_name(node, "epsilon", "float")
     if epsilon is None:
         epsilon = 0.00001
 
     # Calculate new node
-    new_data = scale_data * (input_data - mean_data) / np.sqrt(var_data + epsilon) + bias_data
+    new_data = (
+        scale_data * (input_data - mean_data) / np.sqrt(var_data + epsilon)
+        + bias_data
+    )
 
     new_node = helper.numpy_to_constant(node.output[0], new_data)
 
     # Reconnect the graph
-    node_to_del.extend([node, input_node, scale_node, bias_node, mean_node, var_node])
+    node_to_del.extend(
+        [node, input_node, scale_node, bias_node, mean_node, var_node]
+    )
+    g.node.extend([new_node])
+
+    for value in input_value_info:
+        if value is not None:
+            g.value_info.remove(value)
+
+    while node_to_del:
+        node = node_to_del.pop()
+        g.node.remove(node)
+
+    return True
+
+
+def DequantizeLinear_constant_folding(g, node):
+    """Fold constant and mul nodes to a single constant node."""
+    # Prepare data
+    node_to_del = []
+    x_node = helper.find_node_by_output_name(g, node.input[0])
+    x_scale_node = helper.find_node_by_output_name(g, node.input[1])
+    if len(node.input) > 2:
+        x_zero_point_node = helper.find_node_by_output_name(g, node.input[2])
+    else:
+        x_zero_point_node = None
+
+    input_value_info = []
+    for i in range(len(node.input)):
+        input_value_info.append(helper.find_value_by_name(g, node.input[i]))
+
+    if input_value_info[0] is None:
+        return False
+
+    x_data = helper.constant_to_numpy(x_node)
+    x_scale_data = helper.constant_to_numpy(x_scale_node)
+    if x_zero_point_node is not None:
+        x_zero_point_data = helper.constant_to_numpy(x_zero_point_node)
+    else:
+        x_zero_point_data = np.array([0.0])
+
+    # Calculate new node
+    new_data = (
+        x_data.astype(np.float32) - x_zero_point_data.astype(np.float32)
+    ) * x_scale_data
+
+    new_node = helper.numpy_to_constant(node.output[0], new_data)
+
+    # Reconnect the graph
+    node_to_del.extend([node, x_node, x_scale_node])
+    if x_zero_point_node is not None:
+        node_to_del.append(x_zero_point_node)
     g.node.extend([new_node])
 
     for value in input_value_info:
@@ -914,21 +952,22 @@ def bn_constant_folding(g, node):
 
 # Available constant folding names to function map.
 constant_folding_nodes = {
-    'Add': add_constant_folding,
-    'BatchNormalization': bn_constant_folding,
-    'Cast': cast_constant_folding,
-    'Concat': concat_constant_folding,
-    'Div': div_constant_folding,
-    'Floor': floor_constant_folding,
-    'Gather': gather_constant_folding,
-    'Mul': mul_constant_folding,
-    'Reciprocal': reciprocal_constant_folding,
-    'ReduceProd': reduceprod_constant_folding,
-    'Reshape': reshape_constant_input_folding,
-    'Slice': slice_constant_folding,
-    'Sqrt': sqrt_constant_folding,
-    'Transpose': transpose_constant_folding,
-    'Unsqueeze': unsqueeze_constant_folding,
-    'Sub': sub_constant_folding,
-    'Neg': neg_constant_folding
+    "Add": add_constant_folding,
+    "BatchNormalization": bn_constant_folding,
+    "Cast": cast_constant_folding,
+    "Concat": concat_constant_folding,
+    "DequantizeLinear": DequantizeLinear_constant_folding,
+    "Div": div_constant_folding,
+    "Floor": floor_constant_folding,
+    "Gather": gather_constant_folding,
+    "Mul": mul_constant_folding,
+    "Reciprocal": reciprocal_constant_folding,
+    "ReduceProd": reduceprod_constant_folding,
+    "Reshape": reshape_constant_input_folding,
+    "Slice": slice_constant_folding,
+    "Sqrt": sqrt_constant_folding,
+    "Transpose": transpose_constant_folding,
+    "Unsqueeze": unsqueeze_constant_folding,
+    "Sub": sub_constant_folding,
+    "Neg": neg_constant_folding,
 }

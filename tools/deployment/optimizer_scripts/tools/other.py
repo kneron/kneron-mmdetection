@@ -1,15 +1,31 @@
-"""Optimization functions that are not fusing, eliminating or replacing. In most
-cases, these are the modifications on the original nodes.
+"""
+Optimization functions that are not fusing, eliminating or replacing.
+In most cases, these are the modifications on the original nodes.
 """
 import struct
 import collections
 import numpy as np
 import onnx.helper
+import onnxoptimizer as optimizer
 import math
 import logging
 from . import helper
 from .modhelper import replace_node_input
 import copy
+from .helper import logger
+
+
+def polish_model(model):
+    """
+    This function combines several useful utility functions together.
+    """
+    onnx.checker.check_model(model)
+    onnx.helper.strip_doc_string(model)
+    model = onnx.shape_inference.infer_shapes(model)
+    model = optimizer.optimize(model)
+    onnx.checker.check_model(model)
+    return model
+
 
 def format_value_info_shape(g):
     """
@@ -18,20 +34,30 @@ def format_value_info_shape(g):
     :param g: the onnx graph
     """
     for value in g.input:
-        if len(value.type.tensor_type.shape.dim) > 0 and\
-           (value.type.tensor_type.shape.dim[0].dim_value <= 0 or\
-           not isinstance(value.type.tensor_type.shape.dim[0].dim_value, int)):
+        if len(value.type.tensor_type.shape.dim) > 0 and (
+            value.type.tensor_type.shape.dim[0].dim_value <= 0
+            or not isinstance(
+                value.type.tensor_type.shape.dim[0].dim_value, int
+            )
+        ):
             value.type.tensor_type.shape.dim[0].dim_value = 1
     for value in g.output:
-        if len(value.type.tensor_type.shape.dim) > 0 and\
-           (value.type.tensor_type.shape.dim[0].dim_value <= 0 or\
-           not isinstance(value.type.tensor_type.shape.dim[0].dim_value, int)):
+        if len(value.type.tensor_type.shape.dim) > 0 and (
+            value.type.tensor_type.shape.dim[0].dim_value <= 0
+            or not isinstance(
+                value.type.tensor_type.shape.dim[0].dim_value, int
+            )
+        ):
             value.type.tensor_type.shape.dim[0].dim_value = 1
     for value in g.value_info:
-        if len(value.type.tensor_type.shape.dim) > 0 and\
-           (value.type.tensor_type.shape.dim[0].dim_value < 0 or\
-           not isinstance(value.type.tensor_type.shape.dim[0].dim_value, int)):
+        if len(value.type.tensor_type.shape.dim) > 0 and (
+            value.type.tensor_type.shape.dim[0].dim_value < 0
+            or not isinstance(
+                value.type.tensor_type.shape.dim[0].dim_value, int
+            )
+        ):
             value.type.tensor_type.shape.dim[0].dim_value = 1
+
 
 def add_name_to_node(g):
     """
@@ -43,37 +69,46 @@ def add_name_to_node(g):
         if len(node.name) == 0:
             node.name = node.output[0]
 
+
 def rename_all_node_name(g):
     """
-    rename all nodes:
+    rename all nodes if the node name is a number:
 
         new_name = old_name + "_kn"
 
     :param g: the onnx graph
-    """    
+    """
 
     for node in g.node:
+        if not node.name.isdigit():
+            # Skip not number names
+            continue
         new_node_name = node.name + "_kn"
         new_node_output0_name = node.output[0] + "_kn"
 
         # in order to keep same output node name, skip if it is output node.
         output_value_info = helper.find_output_by_name(g, node.output[0])
-        if output_value_info != None:
+        if output_value_info is not None:
             continue
 
         # rename  the input of all the following nodes
-        following_nodes = helper.find_following_nodes_by_input_value_name(g, node.output[0])
+        following_nodes = helper.find_following_nodes_by_input_value_name(
+            g, node.output[0]
+        )
         for following_node in following_nodes:
-            replace_node_input(following_node, node.output[0], new_node_output0_name )
+            replace_node_input(
+                following_node, node.output[0], new_node_output0_name
+            )
 
         # rename value info
         value_info = helper.find_value_by_name(g, node.output[0])
-        if value_info != None:
+        if value_info is not None:
             value_info.name = new_node_output0_name
 
         # rename node
         node.output[0] = new_node_output0_name
         node.name = new_node_name
+
 
 def add_output_to_value_info(g):
     """
@@ -85,31 +120,42 @@ def add_output_to_value_info(g):
         if helper.find_value_by_name(g, output.name) is None:
             g.value_info.extend([output])
 
-def find_first_sequential_outputs(g, node):
+
+def find_first_sequential_output(g, node):
     for value_name in node.output:
         value = helper.find_output_by_name(g, value_name)
         if value is not None:
             return value
-    return find_first_sequential_outputs(g, helper.find_nodes_by_input_name(g, node.output[0])[0])
+    next_nodes = helper.find_nodes_by_input_name(g, node.output[0])
+    if len(next_nodes) == 0:
+        # No following nodes
+        return None
+    return find_first_sequential_output(g, next_nodes[0])
+
 
 def remove_nodes(g, cut_nodes=[], cut_types=[]):
     node_to_delete = []
-    #Find target nodes
+    # Find target nodes
     for node in g.node:
         if node.name not in cut_nodes and node.op_type not in cut_types:
             continue
         else:
             node_to_delete.append(node)
-    # Mapping outputs
+    # Mapping originnal outputs to new outputs.
+    # This mapping is to keep the output order.
     output_mapping = {}
     new_output = set()
     for node in node_to_delete:
-        original_output = find_first_sequential_outputs(g, node)
+        original_output = find_first_sequential_output(g, node)
         if original_output.name not in output_mapping:
             output_mapping[original_output.name] = []
         for input_name in node.input:
             value = helper.find_value_by_name(g, input_name)
-            if value is not None and helper.find_output_by_name(g, input_name) is None and value.name not in new_output:
+            if (
+                value is not None
+                and helper.find_output_by_name(g, input_name) is None
+                and value.name not in new_output
+            ):
                 output_mapping[original_output.name].append(value)
                 new_output.add(value.name)
     # Remove them
@@ -121,7 +167,7 @@ def remove_nodes(g, cut_nodes=[], cut_types=[]):
     for input_value in g.input:
         visited_values.add(input_value.name)
     for node in g.node:
-        if node.op_type == 'Constant':
+        if node.op_type == "Constant":
             visited_values.add(node.output[0])
             unused_constant_map[node.output[0]] = node
             continue
@@ -137,25 +183,31 @@ def remove_nodes(g, cut_nodes=[], cut_types=[]):
             node_to_delete.append(node)
     # Mapping outputs again
     for node in node_to_delete:
-        original_output = find_first_sequential_outputs(g, node)
+        original_output = find_first_sequential_output(g, node)
+        if original_output is None:
+            continue
         if original_output.name not in output_mapping:
             output_mapping[original_output.name] = []
         for input_name in node.input:
             value = helper.find_value_by_name(g, input_name)
-            if value is not None and helper.find_output_by_name(g, input_name) is None and value.name not in new_output:
+            if (
+                value is not None
+                and helper.find_output_by_name(g, input_name) is None
+                and value.name not in new_output
+            ):
                 output_mapping[original_output.name].append(value)
                 new_output.add(value.name)
     # Remove them
     while node_to_delete:
         g.node.remove(node_to_delete.pop())
-    #Remove unused constants
+    # Remove unused constants
     for node in g.node:
         for input_name in node.input:
             if input_name in unused_constant_map:
                 del unused_constant_map[input_name]
     for node in unused_constant_map.values():
         g.node.remove(node)
-    #Remove unreachable value infos
+    # Remove unreachable value infos
     reachable_values = set()
     for input_value in g.input:
         reachable_values.add(input_value.name)
@@ -178,15 +230,24 @@ def remove_nodes(g, cut_nodes=[], cut_types=[]):
     while output_values:
         output_value = output_values.pop()
         if output_value.name in reachable_values:
-            logging.info("Keep output {}".format(output_value.name))
+            logger.info("Keep output {}".format(output_value.name))
             g.output.extend([output_value])
         elif output_value.name in output_mapping:
-            real_outputs = [i for i in output_mapping[output_value.name] if i.name in reachable_values]
-            logging.info("Replace output {} with {}".format(output_value.name, [i.name for i in real_outputs]))
+            real_outputs = [
+                i
+                for i in output_mapping[output_value.name]
+                if i.name in reachable_values
+            ]
+            logger.info(
+                "Replace output {} with {}".format(
+                    output_value.name, [i.name for i in real_outputs]
+                )
+            )
             g.output.extend(real_outputs)
         else:
-            logging.info("Abandon output {}".format(output_value.name))
+            logger.info("Abandon output {}".format(output_value.name))
             continue
+
 
 def transpose_B_in_Gemm(g):
     """
@@ -195,7 +256,7 @@ def transpose_B_in_Gemm(g):
     :param g: the onnx graph
     """
     for node in g.node:
-        if node.op_type != 'Gemm':
+        if node.op_type != "Gemm":
             continue
         do_it = False
         for attr in node.attribute:
@@ -217,17 +278,18 @@ def transpose_B_in_Gemm(g):
         w_node.attribute[0].t.dims[1] = dim_0
         if w_node.attribute[0].t.raw_data:
             raw_data = w_node.attribute[0].t.raw_data
-            fl_data = [i[0] for i in struct.iter_unpack('f', raw_data)]
+            fl_data = [i[0] for i in struct.iter_unpack("f", raw_data)]
         else:
             fl_data = w_node.attribute[0].t.float_data
         w = np.reshape(fl_data, (dim_0, dim_1))
         w = w.transpose((1, 0)).flatten()
         if w_node.attribute[0].t.raw_data:
-            buf = struct.pack('%sf' % len(w), *w)
+            buf = struct.pack("%sf" % len(w), *w)
             w_node.attribute[0].t.raw_data = buf
         else:
             for i in range(len(fl_data)):
                 w_node.attribute[0].t.float_data[i] = w[i]
+
 
 def topological_sort(g):
     """
@@ -249,11 +311,13 @@ def topological_sort(g):
     for _ in range(length):
         node = g.node.pop()
         node_map[node.name] = node
-        if len(node.input) == 0:
+        if len([i for i in node.input if i != ""]) == 0:
             to_add.append(node.name)
         else:
-            in_degree[node.name] = len(node.input)
+            in_degree[node.name] = len([i for i in node.input if i != ""])
             for input_name in node.input:
+                if input_name == "":
+                    continue
                 output_nodes[input_name].append(node.name)
     # sort
     # deal with input first
@@ -282,9 +346,12 @@ def topological_sort(g):
                 del in_degree[next_node_name]
     g.node.extend(sorted_nodes)
     if in_degree:
-        raise RuntimeError("Unreachable nodes exist: {}".format(in_degree.keys()))
+        raise RuntimeError(
+            "Unreachable nodes exist: {}".format(in_degree.keys())
+        )
     if node_map:
         raise RuntimeError("Unused nodes exist: {}".format(node_map.keys()))
+
 
 def remove_zero_value_info(g):
     value_info_list = list(g.value_info)
@@ -297,7 +364,10 @@ def remove_zero_value_info(g):
                 g.value_info.remove(vi)
                 break
 
+
 def inference_shapes(m):
+    while len(m.graph.value_info) > 0:
+        m.graph.value_info.pop()
     g = m.graph
     inferencing_shapes = True
     while inferencing_shapes:
@@ -312,32 +382,38 @@ def inference_shapes(m):
             inferencing_shapes = True
         if inferencing_shapes:
             topological_sort(g)
-            m = onnx.utils.polish_model(m)
+            m = polish_model(m)
             g = m.graph
     remove_zero_value_info(g)
-    m = onnx.utils.polish_model(m)
+    m = polish_model(m)
     return m
+
 
 def inference_resize_shape(g):
     for node in g.node:
-        if node.op_type != 'Resize':
+        if node.op_type != "Resize":
             continue
 
         output_value = helper.find_value_by_name(g, node.output[0])
-        output_value = helper.find_output_by_name(g, node.output[0]) if output_value is None else output_value
+        output_value = (
+            helper.find_output_by_name(g, node.output[0])
+            if output_value is None
+            else output_value
+        )
         if output_value is not None:
             continue
 
-        if len(node.input) == 4: # input: X, roi, scales, sizes
+        if len(node.input) == 4:  # input: X, roi, scales, sizes
             shape_node = helper.find_node_by_output_name(g, node.input[3])
-            if shape_node.op_type != 'Constant':
+            if shape_node.op_type != "Constant":
                 continue
 
             _, shape_value = helper.constant_to_list(shape_node)
             output_value = onnx.helper.make_tensor_value_info(
-                    node.output[0],
-                    onnx.TensorProto.FLOAT,
-                    [int(v) for v in shape_value])
+                node.output[0],
+                onnx.TensorProto.FLOAT,
+                [int(v) for v in shape_value],
+            )
             g.value_info.extend([output_value])
             return True
         else:
@@ -348,18 +424,20 @@ def inference_resize_shape(g):
                 continue
             shape_value = helper.get_shape_from_value_info(input_value)
             scales_node = helper.find_node_by_output_name(g, node.input[2])
-            if scales_node.op_type != 'Constant':
+            if scales_node.op_type != "Constant":
                 continue
             _, scales_value = helper.constant_to_list(scales_node)
             for i in range(len(shape_value)):
                 shape_value[i] *= scales_value[i]
             output_value = onnx.helper.make_tensor_value_info(
-                    node.output[0],
-                    onnx.TensorProto.FLOAT,
-                    [int(v) for v in shape_value])
+                node.output[0],
+                onnx.TensorProto.FLOAT,
+                [int(v) for v in shape_value],
+            )
             g.value_info.extend([output_value])
             return True
     return False
+
 
 def inference_upsample_shape(g):
     """For onnx v1.4.1+, onnx cannot inference upsample output shape. Let's\\
@@ -370,7 +448,7 @@ def inference_upsample_shape(g):
     :return: True if any Upsample shape is generated. Otherwise, False.
     """
     for node in g.node:
-        if node.op_type != 'Upsample':
+        if node.op_type != "Upsample":
             continue
         output_value = helper.find_value_by_name(g, node.output[0])
         if output_value is None:
@@ -381,33 +459,37 @@ def inference_upsample_shape(g):
         input_value = helper.find_value_by_name(g, node.input[0])
         if input_value is None:
             continue
-            #raise RuntimeError("Shape for {} has not been generated.".format(node.input[0]))
         if not helper.get_shape_from_value_info(input_value):
             continue
-            #raise RuntimeError("Shape for {} is empty.".format(node.input[0]))
         input_shape = helper.get_shape_from_value_info(input_value)
         # Get upsample weight
         weight_node = helper.find_node_by_output_name(g, node.input[1])
         weight_shape, weight = helper.constant_to_list(weight_node)
         if len(input_shape) != weight_shape[0]:
-            raise RuntimeError("Unmatch input shape and weight shape: {} vs {}".format(input_shape, weight_shape))
+            raise RuntimeError(
+                "Unmatch input shape and weight shape: {} vs {}".format(
+                    input_shape, weight_shape
+                )
+            )
         # Calculate shape
         output_shape = list(input_shape)
         for i in range(len(output_shape)):
             output_shape[i] = int(input_shape[i] * weight[i])
         output_value = onnx.helper.make_tensor_value_info(
-                node.output[0],
-                input_value.type.tensor_type.elem_type,
-                output_shape)
+            node.output[0],
+            input_value.type.tensor_type.elem_type,
+            output_shape,
+        )
         g.value_info.extend([output_value])
         return True
     return False
+
 
 def inference_cov_shape(g):
     processed = False
     for node in g.node:
         # Check for Conv output shape need to be inferrenced.
-        if node.op_type != 'Conv':
+        if node.op_type != "Conv":
             continue
         # Input shape is not ready yet. Skip.
         input_value_info = helper.find_value_by_name(g, node.input[0])
@@ -422,56 +504,82 @@ def inference_cov_shape(g):
         output_value_info = helper.find_value_by_name(g, node.output[0])
         if not output_value_info:
             output_value_info = helper.find_output_by_name(g, node.output[0])
-        if output_value_info and \
-            helper.get_shape_from_value_info(output_value_info):
+        if output_value_info and helper.get_shape_from_value_info(
+            output_value_info
+        ):
             continue
 
         # Now start the inference.
+        # Check kernel shape
+        kernel_value_info = helper.find_value_by_name(g, node.input[1])
+        _, kernel_shape = helper.find_size_shape_from_value(kernel_value_info)
+        if not kernel_shape:
+            continue
         # If auto_pad is set, use the auto_pad.
-        auto_pad = helper.get_var_attribute_by_name(node, 'auto_pad', 'string')
+        auto_pad = helper.get_var_attribute_by_name(node, "auto_pad", "string")
         pads = None
-        if auto_pad is not None and auto_pad != 'NOTSET':
-            if auto_pad == 'SAME_LOWER' or auto_pad == 'SAME_UPPER':
+        if auto_pad is not None and auto_pad != "NOTSET":
+            if auto_pad == "SAME_LOWER" or auto_pad == "SAME_UPPER":
                 new_output_value_info = onnx.helper.make_tensor_value_info(
                     node.output[0],
                     input_value_info.type.tensor_type.elem_type,
-                    input_shape
+                    [
+                        input_shape[0],
+                        kernel_shape[0],
+                        input_shape[2],
+                        input_shape[3],
+                    ],
                 )
                 if output_value_info:
                     g.value_info.remove(output_value_info)
                 g.value_info.extend([new_output_value_info])
                 processed = True
                 continue
-            elif auto_pad == 'VALID':
+            elif auto_pad == "VALID":
                 pads = [0, 0, 0, 0]
             else:
-                print("Unrecognized auto_pad value: " + str(auto_pad))
+                logger.error("Unrecognized auto_pad value: " + str(auto_pad))
                 exit(1)
-        kernel_value_info = helper.find_value_by_name(g, node.input[1])
-        _, kernel_shape = helper.find_size_shape_from_value(kernel_value_info)
-        if not input_shape or not kernel_shape:
-            continue
-        strides = helper.get_attribute_by_name(node, 'strides').ints
+
+        strides = helper.get_attribute_by_name(node, "strides").ints
         if not pads:
-            pads = helper.get_attribute_by_name(node, 'pads').ints
-        dilation = helper.get_attribute_by_name(node, 'dilations').ints
+            pads = helper.get_attribute_by_name(node, "pads").ints
+        dilation = helper.get_attribute_by_name(node, "dilations").ints
 
         # Pytorch model has the case where strides only have one number
         if len(strides) == 1:
-            return strides.append(strides[0])
+            strides.append(strides[0])
         if len(dilation) == 1:
-            return dilation.append(dilation[0])
+            dilation.append(dilation[0])
 
-        H = math.floor((input_shape[2]+pads[0]+pads[2]-\
-            dilation[0]*(kernel_shape[2]-1)-1)/strides[0]+1)
-        W = math.floor((input_shape[3]+pads[1]+pads[3]-\
-            dilation[1]*(kernel_shape[3]-1)-1)/strides[1]+1)
+        H = math.floor(
+            (
+                input_shape[2]
+                + pads[0]
+                + pads[2]
+                - dilation[0] * (kernel_shape[2] - 1)
+                - 1
+            )
+            / strides[0]
+            + 1
+        )
+        W = math.floor(
+            (
+                input_shape[3]
+                + pads[1]
+                + pads[3]
+                - dilation[1] * (kernel_shape[3] - 1)
+                - 1
+            )
+            / strides[1]
+            + 1
+        )
         output_shape = [input_shape[0], kernel_shape[0], H, W]
 
         new_output_value_info = onnx.helper.make_tensor_value_info(
             node.output[0],
             input_value_info.type.tensor_type.elem_type,
-            output_shape
+            output_shape,
         )
 
         processed = True
@@ -486,9 +594,9 @@ def inference_cov_shape(g):
 def inference_split_shape(g):
     processed = False
     for node in g.node:
-        if node.op_type != 'Split':
+        if node.op_type != "Split":
             continue
-        
+
         input_val_info = helper.find_value_by_name(g, node.input[0])
         if not input_val_info:
             input_val_info = helper.find_input_by_name(g, node.input[0])
@@ -500,18 +608,24 @@ def inference_split_shape(g):
             continue
 
         output_val_names = list(node.output)
-        output_vals = [helper.find_value_by_name(g, val_name) for val_name in output_val_names]
+        output_vals = [
+            helper.find_value_by_name(g, val_name)
+            for val_name in output_val_names
+        ]
 
-        output_shapes = [helper.find_size_shape_from_value(output_val)[1] for output_val in output_vals]
+        output_shapes = [
+            helper.find_size_shape_from_value(output_val)[1]
+            for output_val in output_vals
+        ]
         if not any([len(s) == 0 for s in output_shapes]):
             continue
 
         for att in node.attribute:
-            if att.name == 'axis':
+            if att.name == "axis":
                 axis = att.i
             else:
                 split = list(att.ints)
-        
+
         new_output_vals = []
         for i in range(len(output_val_names)):
             new_shape = list(input_shape)
@@ -519,24 +633,23 @@ def inference_split_shape(g):
             new_output_val = onnx.helper.make_tensor_value_info(
                 output_val_names[i],
                 input_val_info.type.tensor_type.elem_type,
-                new_shape
+                new_shape,
             )
             new_output_vals.append(new_output_val)
-        
+
         for val in output_vals:
             if val is not None:
                 g.value_info.remove(val)
         g.value_info.extend(new_output_vals)
 
         processed = True
-    
+
     return processed
 
 
 def parse_shape_change_input(s: str):
-    """The input should be like 'input 1 1 224 224'.
-    """
-    s_list = s.split(' ')
+    """The input should be like 'input 1 1 224 224'."""
+    s_list = s.split(" ")
     if len(s_list) < 2:
         print("Cannot parse the shape change input: {}".format(s))
         return None
@@ -544,6 +657,7 @@ def parse_shape_change_input(s: str):
     for i in range(1, len(s_list)):
         shape.append(int(s_list[i]))
     return s_list[0], shape
+
 
 def change_input_shape(g, target_list):
     for target in target_list:
@@ -566,6 +680,7 @@ def change_input_shape(g, target_list):
             print("Cannot parse {} into name and int".format(target))
             continue
 
+
 def change_output_shape(g, target_list):
     for target in target_list:
         try:
@@ -586,6 +701,7 @@ def change_output_shape(g, target_list):
             # This happens when the input cannot be converter into int
             print("Cannot parse {} into name and int".format(target))
             continue
+
 
 def add_nop_conv_after(g, value_names):
     """Add do-nothing depthwise Conv nodes after the given value info. It will\\
@@ -611,31 +727,31 @@ def add_nop_conv_after(g, value_names):
         # Construct 4 weights
         node_name = value_name + "_nop_conv"
         ones = [1.0] * channel
-        weight_node = helper.list_to_constant(node_name + "_weight", [channel, 1, 1, 1], ones)
+        weight_node = helper.list_to_constant(
+            node_name + "_weight", [channel, 1, 1, 1], ones
+        )
         # Construct BN node
         conv_node = onnx.helper.make_node(
             "Conv",
-            [value_name,
-            weight_node.output[0]],
+            [value_name, weight_node.output[0]],
             [node_name],
-            name = node_name,
-            dilations = [1, 1],
-            group = channel,
-            kernel_shape = [1, 1],
-            pads = [0, 0, 0, 0],
-            strides = [1, 1]
+            name=node_name,
+            dilations=[1, 1],
+            group=channel,
+            kernel_shape=[1, 1],
+            pads=[0, 0, 0, 0],
+            strides=[1, 1],
         )
         # Reconnect the graph
-        following_nodes = helper.find_following_nodes_by_input_value_name(g, value_name)
+        following_nodes = helper.find_following_nodes_by_input_value_name(
+            g, value_name
+        )
         if len(following_nodes) > 0:
             for following_node in following_nodes:
                 replace_node_input(following_node, value_name, node_name)
         else:
-            # If the node is the output, replace the output with the previous input.
             new_value = onnx.helper.make_tensor_value_info(
-                node_name,
-                value.type.tensor_type.elem_type,
-                shape
+                node_name, value.type.tensor_type.elem_type, shape
             )
             output_values = []
             while len(g.output):
@@ -650,12 +766,13 @@ def add_nop_conv_after(g, value_names):
         g.node.extend([conv_node, weight_node])
     topological_sort(g)
 
-def add_nop_bn_after(g, value_names):
-    """Add do-nothing BatchNormalization nodes after the given value info. It will\\
-    take the given names as the inputs of the new node and replace the inputs\\
-    of the following nodes.
 
-    :param g: the graph\\
+def add_nop_bn_after(g, value_names):
+    """Add do-nothing BatchNormalization nodes after the given value info.
+    It will take the given names as the inputs of the new node and replace
+    the inputs of the following nodes.
+
+    :param g: the graph
     :param value_names: a list of string which are the names of value_info.
     """
     for value_name in value_names:
@@ -675,32 +792,39 @@ def add_nop_bn_after(g, value_names):
         node_name = value_name + "_nop_bn"
         ones = [1.0] * channel
         zeros = [0.0] * channel
-        scale_node = helper.list_to_constant(node_name + "_scale", [channel], ones)
-        bias_node = helper.list_to_constant(node_name + "_bias", [channel], zeros)
-        mean_node = helper.list_to_constant(node_name + "_mean", [channel], zeros)
+        scale_node = helper.list_to_constant(
+            node_name + "_scale", [channel], ones
+        )
+        bias_node = helper.list_to_constant(
+            node_name + "_bias", [channel], zeros
+        )
+        mean_node = helper.list_to_constant(
+            node_name + "_mean", [channel], zeros
+        )
         var_node = helper.list_to_constant(node_name + "_var", [channel], ones)
         # Construct BN node
         bn_node = onnx.helper.make_node(
             "BatchNormalization",
-            [value_name,
-            scale_node.output[0],
-            bias_node.output[0],
-            mean_node.output[0],
-            var_node.output[0]],
+            [
+                value_name,
+                scale_node.output[0],
+                bias_node.output[0],
+                mean_node.output[0],
+                var_node.output[0],
+            ],
             [node_name],
-            name = node_name
+            name=node_name,
         )
         # Reconnect the graph
-        following_nodes = helper.find_following_nodes_by_input_value_name(g, value_name)
+        following_nodes = helper.find_following_nodes_by_input_value_name(
+            g, value_name
+        )
         if len(following_nodes) > 0:
             for following_node in following_nodes:
                 replace_node_input(following_node, value_name, node_name)
         else:
-            # If the node is the output, replace the output with the previous input.
             new_value = onnx.helper.make_tensor_value_info(
-                node_name,
-                value.type.tensor_type.elem_type,
-                shape
+                node_name, value.type.tensor_type.elem_type, shape
             )
             output_values = []
             while len(g.output):
@@ -715,12 +839,14 @@ def add_nop_bn_after(g, value_names):
         g.node.extend([bn_node, scale_node, bias_node, mean_node, var_node])
     topological_sort(g)
 
-def add_shift_scale_bn_after(g, value_name, channel_shift, channel_scale):
-    """Add do-nothing BatchNormalization nodes after the given value info. It will\\
-    take the given names as the inputs of the new node and replace the inputs\\
-    of the following nodes.
 
-    :param g: the graph\\
+def add_bias_scale_bn_after(g, value_name, channel_bias, channel_scale):
+    """
+    Add do-nothing BatchNormalization nodes after the given value info.
+    It will take the given names as the inputs of the new node and replace
+    the inputs of the following nodes.
+
+    :param g: the graph
     :param value_name: a list of string which are the name of value_info.
     """
     # Find the value first
@@ -739,32 +865,37 @@ def add_shift_scale_bn_after(g, value_name, channel_shift, channel_scale):
     node_name = value_name + "_scale_shift_bn"
     ones = [1.0] * channel
     zeros = [0.0] * channel
-    scale_node = helper.list_to_constant(node_name + "_scale", [len(channel_scale)], channel_scale)
-    bias_node = helper.list_to_constant(node_name + "_bias", [len(channel_shift)], channel_shift)
+    scale_node = helper.list_to_constant(
+        node_name + "_scale", [len(channel_scale)], channel_scale
+    )
+    bias_node = helper.list_to_constant(
+        node_name + "_bias", [len(channel_bias)], channel_bias
+    )
     mean_node = helper.list_to_constant(node_name + "_mean", [channel], zeros)
     var_node = helper.list_to_constant(node_name + "_var", [channel], ones)
     # Construct BN node
     bn_node = onnx.helper.make_node(
         "BatchNormalization",
-        [value_name,
-        scale_node.output[0],
-        bias_node.output[0],
-        mean_node.output[0],
-        var_node.output[0]],
+        [
+            value_name,
+            scale_node.output[0],
+            bias_node.output[0],
+            mean_node.output[0],
+            var_node.output[0],
+        ],
         [node_name],
-        name = node_name
+        name=node_name,
     )
     # Reconnect the graph
-    following_nodes = helper.find_following_nodes_by_input_value_name(g, value_name)
+    following_nodes = helper.find_following_nodes_by_input_value_name(
+        g, value_name
+    )
     if len(following_nodes) > 0:
         for following_node in following_nodes:
             replace_node_input(following_node, value_name, node_name)
     else:
-        # If the node is the output, replace the output with the previous input.
         new_value = onnx.helper.make_tensor_value_info(
-            node_name,
-            value.type.tensor_type.elem_type,
-            shape
+            node_name, value.type.tensor_type.elem_type, shape
         )
         output_values = []
         while len(g.output):
@@ -779,6 +910,7 @@ def add_shift_scale_bn_after(g, value_name, channel_shift, channel_scale):
     g.node.extend([bn_node, scale_node, bias_node, mean_node, var_node])
     topological_sort(g)
 
+
 def duplicate_shared_Flatten(g):
     """To feed our compiler, bind Flatten with Gemm. If the output of one\\
     Flatten goes to two Gemm nodes, duplicate the Flatten.
@@ -787,15 +919,17 @@ def duplicate_shared_Flatten(g):
     """
     for node in g.node:
         # Find a Flatten node
-        if node.op_type != 'Flatten':
+        if node.op_type != "Flatten":
             continue
         # Check Flatten outputs. Get following Gemm
-        output_nodes = helper.find_following_nodes_by_input_value_name(g, node.output[0])
+        output_nodes = helper.find_following_nodes_by_input_value_name(
+            g, node.output[0]
+        )
         if len(output_nodes) < 2:
             continue
         gemm_nodes = []
         for output_node in output_nodes:
-            if output_node.op_type == 'Gemm':
+            if output_node.op_type == "Gemm":
                 gemm_nodes.append(output_node)
         if len(gemm_nodes) < 2:
             continue
@@ -808,12 +942,13 @@ def duplicate_shared_Flatten(g):
                 node.input,
                 [new_flatten_name],
                 name=new_flatten_name,
-                axis=1
+                axis=1,
             )
             # Connect new graph
             replace_node_input(gemm_nodes[i], node.output[0], new_flatten_name)
             g.node.extend([new_flatten_node])
     topological_sort(g)
+
 
 def deconv_to_conv_info_extraction(input_size, node_proto):
     """Extract the information needed for deconv split.
@@ -824,29 +959,62 @@ def deconv_to_conv_info_extraction(input_size, node_proto):
     """
     attr = dict()
     # Get attributes from Deconv node
-    attr["auto_pad"] = helper.get_var_attribute_by_name(node_proto, "auto_pad", "string")
-    attr["dilations"] = helper.get_list_attribute_by_name(node_proto, "dilations", "int")
-    attr["group"] = helper.get_var_attribute_by_name(node_proto, "group", "int")
-    attr["kernel_shape"] = helper.get_list_attribute_by_name(node_proto, "kernel_shape", "int")
-    attr["output_padding"] = helper.get_list_attribute_by_name(node_proto, "output_padding", "int")
+    attr["auto_pad"] = helper.get_var_attribute_by_name(
+        node_proto, "auto_pad", "string"
+    )
+    attr["dilations"] = helper.get_list_attribute_by_name(
+        node_proto, "dilations", "int"
+    )
+    attr["group"] = helper.get_var_attribute_by_name(
+        node_proto, "group", "int"
+    )
+    attr["kernel_shape"] = helper.get_list_attribute_by_name(
+        node_proto, "kernel_shape", "int"
+    )
+    attr["output_padding"] = helper.get_list_attribute_by_name(
+        node_proto, "output_padding", "int"
+    )
     attr["pads"] = helper.get_list_attribute_by_name(node_proto, "pads", "int")
-    attr["strides"] = helper.get_list_attribute_by_name(node_proto, "strides", "int")
+    attr["strides"] = helper.get_list_attribute_by_name(
+        node_proto, "strides", "int"
+    )
     # Get output_padding
     if attr["output_padding"] is None:
-        if attr["auto_pad"] == "SAME_LOWER" or attr["auto_pad"] == "SAME_UPPER":
-            attr["output_padding"] = [attr["strides"][0] - 1, attr["strides"][1]]
+        if (
+            attr["auto_pad"] == "SAME_LOWER"
+            or attr["auto_pad"] == "SAME_UPPER"
+        ):
+            attr["output_padding"] = [
+                attr["strides"][0] - 1,
+                attr["strides"][1],
+            ]
         else:
-            attr["output_padding"] = [max(attr["strides"][0] - attr["kernel_shape"][0], 0),
-                                      max(attr["strides"][1] - attr["kernel_shape"][1], 0)]
+            attr["output_padding"] = [
+                max(attr["strides"][0] - attr["kernel_shape"][0], 0),
+                max(attr["strides"][1] - attr["kernel_shape"][1], 0),
+            ]
     # Calculate conv_padding
     if attr["auto_pad"] == "SAME_LOWER" or attr["auto_pad"] == "SAME_UPPER":
-        pad1_h = attr["kernel_shape"][0] - (attr["kernel_shape"][0] - 1) // 2 - 1
-        pad1_w = attr["kernel_shape"][1] - (attr["kernel_shape"][1] - 1) // 2 - 1
-        head_h = min(attr["kernel_shape"][0] // 2, (attr["output_padding"][0] + 1) // 2)
-        head_w = min(attr["kernel_shape"][1] // 2, (attr["output_padding"][1] + 1) // 2)
+        pad1_h = (
+            attr["kernel_shape"][0] - (attr["kernel_shape"][0] - 1) // 2 - 1
+        )
+        pad1_w = (
+            attr["kernel_shape"][1] - (attr["kernel_shape"][1] - 1) // 2 - 1
+        )
+        head_h = min(
+            attr["kernel_shape"][0] // 2, (attr["output_padding"][0] + 1) // 2
+        )
+        head_w = min(
+            attr["kernel_shape"][1] // 2, (attr["output_padding"][1] + 1) // 2
+        )
         tail_h = attr["output_padding"][0] - head_h
         tail_w = attr["output_padding"][1] - head_w
-        attr["conv_pads"] = [pad1_h + head_h, pad1_w + head_w, pad1_h + tail_h, pad1_w + tail_w]
+        attr["conv_pads"] = [
+            pad1_h + head_h,
+            pad1_w + head_w,
+            pad1_h + tail_h,
+            pad1_w + tail_w,
+        ]
     elif attr["pads"] is not None:
         sum_of_pads = sum(attr["pads"])
         if sum_of_pads == 0:
@@ -857,22 +1025,51 @@ def deconv_to_conv_info_extraction(input_size, node_proto):
             head_w = 0
             tail_h = attr["output_padding"][0] - head_h
             tail_w = attr["output_padding"][1] - head_w
-            attr["conv_pads"] = [pad1_h + head_h, pad1_w + head_w, pad1_h + tail_h, pad1_w + tail_w]
+            attr["conv_pads"] = [
+                pad1_h + head_h,
+                pad1_w + head_w,
+                pad1_h + tail_h,
+                pad1_w + tail_w,
+            ]
         else:
             # Calculate output shape
             tmp_output_shape = [0, 0]
-            tmp_output_shape[0] = attr["strides"][0] * (input_size[2] - 1) + attr["output_padding"][0] + attr["kernel_shape"][0] - attr["pads"][0] - attr["pads"][2]
-            tmp_output_shape[1] = attr["strides"][1] * (input_size[3] - 1) + attr["output_padding"][1] + attr["kernel_shape"][1] - attr["pads"][1] - attr["pads"][3]
+            tmp_output_shape[0] = (
+                attr["strides"][0] * (input_size[2] - 1)
+                + attr["output_padding"][0]
+                + attr["kernel_shape"][0]
+                - attr["pads"][0]
+                - attr["pads"][2]
+            )
+            tmp_output_shape[1] = (
+                attr["strides"][1] * (input_size[3] - 1)
+                + attr["output_padding"][1]
+                + attr["kernel_shape"][1]
+                - attr["pads"][1]
+                - attr["pads"][3]
+            )
             # Calculate real conv output shape
             tmp_center_shape = [0, 0]
             tmp_center_shape[0] = (input_size[2] - 1) * attr["strides"][0] + 1
             tmp_center_shape[1] = (input_size[3] - 1) * attr["strides"][1] + 1
             # Calculate padding
             total_padding = [0, 0]
-            total_padding[0] = tmp_output_shape[0] - tmp_center_shape[0] + attr["kernel_shape"][0] - 1
-            total_padding[1] = tmp_output_shape[1] - tmp_center_shape[1] + attr["kernel_shape"][1] - 1
+            total_padding[0] = (
+                tmp_output_shape[0]
+                - tmp_center_shape[0]
+                + attr["kernel_shape"][0]
+                - 1
+            )
+            total_padding[1] = (
+                tmp_output_shape[1]
+                - tmp_center_shape[1]
+                + attr["kernel_shape"][1]
+                - 1
+            )
             if total_padding[0] < 0 or total_padding[1] < 0:
-                raise RuntimeError(node_proto.name + " cannot infer conv padding.")
+                raise RuntimeError(
+                    node_proto.name + " cannot infer conv padding."
+                )
             conv_pads_ = [0] * 4
             conv_pads_[0] = total_padding[0] // 2
             conv_pads_[1] = total_padding[1] // 2
@@ -886,8 +1083,14 @@ def deconv_to_conv_info_extraction(input_size, node_proto):
         head_w = 0
         tail_h = attr["output_padding"][0] - head_h
         tail_w = attr["output_padding"][1] - head_w
-        attr["conv_pads"] = [pad1_h + head_h, pad1_w + head_w, pad1_h + tail_h, pad1_w + tail_w]
+        attr["conv_pads"] = [
+            pad1_h + head_h,
+            pad1_w + head_w,
+            pad1_h + tail_h,
+            pad1_w + tail_w,
+        ]
     return attr
+
 
 def split_ConvTranspose(model):
     """To feed our compiler, split ConvTranspose into Upsample and Conv.
@@ -904,7 +1107,7 @@ def split_ConvTranspose(model):
     # Get a Convtranspose layer
     for node in g.node:
         # Find a Flatten node
-        if node.op_type != 'ConvTranspose':
+        if node.op_type != "ConvTranspose":
             continue
         # Check auto_pad
         auto_pad_proto = helper.get_attribute_by_name(node, "auto_pad")
@@ -928,11 +1131,15 @@ def split_ConvTranspose(model):
         attr = deconv_to_conv_info_extraction(input_shape, node)
         # Generate Upsample scales
         upsample_output_shape = list(input_shape)
-        upsample_output_shape[2] = (input_shape[2] - 1) * attr["strides"][0] + 1
-        upsample_output_shape[3] = (input_shape[3] - 1) * attr["strides"][1] + 1
+        upsample_output_shape[2] = (input_shape[2] - 1) * attr["strides"][
+            0
+        ] + 1
+        upsample_output_shape[3] = (input_shape[3] - 1) * attr["strides"][
+            1
+        ] + 1
         upsample_node_name = node.name + "_inner_upsample"
         upsample_scale_name = upsample_node_name + "_scales"
-        scales_np = np.ones([4]).astype('float32')
+        scales_np = np.ones([4]).astype("float32")
         scales_np[2] = float(upsample_output_shape[2]) / input_shape[2]
         scales_np[3] = float(upsample_output_shape[3]) / input_shape[3]
         scales_node = helper.numpy_to_constant(upsample_scale_name, scales_np)
@@ -942,19 +1149,21 @@ def split_ConvTranspose(model):
             [node.input[0], upsample_scale_name],
             [upsample_node_name],
             name=upsample_node_name,
-            mode="zeros"
+            mode="zeros",
         )
         upsample_value_info = onnx.helper.make_tensor_value_info(
             upsample_node_name,
             input_value.type.tensor_type.elem_type,
-            upsample_output_shape
+            upsample_output_shape,
         )
         # Check the weight layer, it may need a transpose
         if attr["group"] != input_shape[1]:
             weight_node = helper.find_node_by_output_name(g, node.input[1])
             weight_np = helper.constant_to_numpy(weight_node)
             new_weight_np = np.transpose(weight_np, [1, 0, 2, 3])
-            new_weight_node = helper.numpy_to_constant(node.input[1], new_weight_np)
+            new_weight_node = helper.numpy_to_constant(
+                node.input[1], new_weight_np
+            )
             node_to_delete.append(weight_node)
             g.node.extend([new_weight_node])
             value = helper.find_value_by_name(g, node.input[1])
@@ -972,7 +1181,7 @@ def split_ConvTranspose(model):
             dilations=[int(i) for i in attr["dilations"]],
             group=int(attr["group"]),
             kernel_shape=[int(i) for i in attr["kernel_shape"]],
-            strides=[int(1), int(1)]
+            strides=[int(1), int(1)],
         )
         # Reconnect the graph
         g.node.extend([scales_node, upsample_node, conv_node])
@@ -983,20 +1192,28 @@ def split_ConvTranspose(model):
         g.node.remove(node)
     topological_sort(g)
 
+
 def add_bn_on_skip_branch(g):
     for n in g.node:
         # Find merge node (Add)
-        if n.op_type != 'Add':
+        if n.op_type != "Add":
             continue
         if len(n.input) != 2:
             continue
         # TODO: Still need to consider more cases
         # Check if skip branch exist
         input_node_a = helper.find_node_by_output_name(g, n.input[0])
-        output_of_input_node_a = helper.find_nodes_by_input_name(g, input_node_a.output[0])
+        output_of_input_node_a = helper.find_nodes_by_input_name(
+            g, input_node_a.output[0]
+        )
         input_node_b = helper.find_node_by_output_name(g, n.input[1])
-        output_of_input_node_b = helper.find_nodes_by_input_name(g, input_node_b.output[0])
-        if len(output_of_input_node_a) == 1 and len(output_of_input_node_b) == 1:
+        output_of_input_node_b = helper.find_nodes_by_input_name(
+            g, input_node_b.output[0]
+        )
+        if (
+            len(output_of_input_node_a) == 1
+            and len(output_of_input_node_b) == 1
+        ):
             continue
         if len(output_of_input_node_a) == 2:
             split_node = input_node_a
@@ -1013,20 +1230,28 @@ def add_bn_on_skip_branch(g):
         node_name = value_name + "_nop_bn"
         ones = [1.0] * channel
         zeros = [0.0] * channel
-        scale_node = helper.list_to_constant(node_name + "_scale", [channel], ones)
-        bias_node = helper.list_to_constant(node_name + "_bias", [channel], zeros)
-        mean_node = helper.list_to_constant(node_name + "_mean", [channel], zeros)
+        scale_node = helper.list_to_constant(
+            node_name + "_scale", [channel], ones
+        )
+        bias_node = helper.list_to_constant(
+            node_name + "_bias", [channel], zeros
+        )
+        mean_node = helper.list_to_constant(
+            node_name + "_mean", [channel], zeros
+        )
         var_node = helper.list_to_constant(node_name + "_var", [channel], ones)
         # Construct BN node
         bn_node = onnx.helper.make_node(
             "BatchNormalization",
-            [value_name,
-            scale_node.output[0],
-            bias_node.output[0],
-            mean_node.output[0],
-            var_node.output[0]],
+            [
+                value_name,
+                scale_node.output[0],
+                bias_node.output[0],
+                mean_node.output[0],
+                var_node.output[0],
+            ],
             [node_name],
-            name = node_name
+            name=node_name,
         )
         # Reconnect the graph
         replace_node_input(n, value_name, node_name)
@@ -1034,10 +1259,11 @@ def add_bn_on_skip_branch(g):
         g.node.extend([bn_node, scale_node, bias_node, mean_node, var_node])
     topological_sort(g)
 
+
 def add_bn_before_add(g):
     for n in g.node:
         # Find merge node (Add)
-        if n.op_type != 'Add':
+        if n.op_type != "Add":
             continue
         if len(n.input) != 2:
             continue
@@ -1045,10 +1271,11 @@ def add_bn_before_add(g):
         input_node_a = helper.find_node_by_output_name(g, n.input[0])
         input_node_b = helper.find_node_by_output_name(g, n.input[1])
         # Skip constant input add
-        if input_node_a is None or input_node_a.op_type == 'Constant':
+        if input_node_a is None or input_node_a.op_type == "Constant":
             continue
-        if input_node_b is None or input_node_b.op_type == 'Constant':
+        if input_node_b is None or input_node_b.op_type == "Constant":
             continue
+
         def add_bn_after(prev_node):
             # Get the channel number from value info
             value_name = prev_node.output[0]
@@ -1059,35 +1286,65 @@ def add_bn_before_add(g):
             node_name = value_name + "_nop_bn"
             ones = [1.0] * channel
             zeros = [0.0] * channel
-            scale_node = helper.list_to_constant(node_name + "_scale", [channel], ones)
-            bias_node = helper.list_to_constant(node_name + "_bias", [channel], zeros)
-            mean_node = helper.list_to_constant(node_name + "_mean", [channel], zeros)
-            var_node = helper.list_to_constant(node_name + "_var", [channel], ones)
+            scale_node = helper.list_to_constant(
+                node_name + "_scale", [channel], ones
+            )
+            bias_node = helper.list_to_constant(
+                node_name + "_bias", [channel], zeros
+            )
+            mean_node = helper.list_to_constant(
+                node_name + "_mean", [channel], zeros
+            )
+            var_node = helper.list_to_constant(
+                node_name + "_var", [channel], ones
+            )
             # Construct BN node
             bn_node = onnx.helper.make_node(
                 "BatchNormalization",
-                [value_name,
-                scale_node.output[0],
-                bias_node.output[0],
-                mean_node.output[0],
-                var_node.output[0]],
+                [
+                    value_name,
+                    scale_node.output[0],
+                    bias_node.output[0],
+                    mean_node.output[0],
+                    var_node.output[0],
+                ],
                 [node_name],
-                name = node_name,
-                epsilon=0.00000001
+                name=node_name,
+                epsilon=0.00000001,
             )
             # Reconnect the graph
             replace_node_input(n, value_name, node_name)
             # Add node to the graph
-            g.node.extend([bn_node, scale_node, bias_node, mean_node, var_node])
-        if not input_node_a.op_type == 'BatchNormalization' or len(helper.find_following_nodes_by_input_value_name(g, input_node_a.output[0])) > 1:
+            g.node.extend(
+                [bn_node, scale_node, bias_node, mean_node, var_node]
+            )
+
+        if (
+            not input_node_a.op_type == "BatchNormalization"
+            or len(
+                helper.find_following_nodes_by_input_value_name(
+                    g, input_node_a.output[0]
+                )
+            )
+            > 1
+        ):
             add_bn_after(input_node_a)
-        if not input_node_b.op_type == 'BatchNormalization' or len(helper.find_following_nodes_by_input_value_name(g, input_node_b.output[0])) > 1:
+        if (
+            not input_node_b.op_type == "BatchNormalization"
+            or len(
+                helper.find_following_nodes_by_input_value_name(
+                    g, input_node_b.output[0]
+                )
+            )
+            > 1
+        ):
             add_bn_after(input_node_b)
     topological_sort(g)
 
+
 def add_bn_before_activation(g):
-    activation_nodes = set(['Relu', 'Clip', 'PRelu', 'LeakyRelu'])
-    previous_nodes = set(['Conv', 'BatchNormalization'])
+    activation_nodes = set(["Relu", "Clip", "PRelu", "LeakyRelu"])
+    previous_nodes = set(["Conv", "BatchNormalization"])
     for n in g.node:
         # Find activation node
         if n.op_type not in activation_nodes:
@@ -1096,6 +1353,7 @@ def add_bn_before_activation(g):
         input_node = helper.find_node_by_output_name(g, n.input[0])
         if input_node is None or input_node.op_type in previous_nodes:
             continue
+
         def add_bn_after(prev_node):
             # Get the channel number from value info
             value_name = prev_node.output[0]
@@ -1106,28 +1364,42 @@ def add_bn_before_activation(g):
             node_name = value_name + "_nop_bn"
             ones = [1.0] * channel
             zeros = [0.0] * channel
-            scale_node = helper.list_to_constant(node_name + "_scale", [channel], ones)
-            bias_node = helper.list_to_constant(node_name + "_bias", [channel], zeros)
-            mean_node = helper.list_to_constant(node_name + "_mean", [channel], zeros)
-            var_node = helper.list_to_constant(node_name + "_var", [channel], ones)
+            scale_node = helper.list_to_constant(
+                node_name + "_scale", [channel], ones
+            )
+            bias_node = helper.list_to_constant(
+                node_name + "_bias", [channel], zeros
+            )
+            mean_node = helper.list_to_constant(
+                node_name + "_mean", [channel], zeros
+            )
+            var_node = helper.list_to_constant(
+                node_name + "_var", [channel], ones
+            )
             # Construct BN node
             bn_node = onnx.helper.make_node(
                 "BatchNormalization",
-                [value_name,
-                scale_node.output[0],
-                bias_node.output[0],
-                mean_node.output[0],
-                var_node.output[0]],
+                [
+                    value_name,
+                    scale_node.output[0],
+                    bias_node.output[0],
+                    mean_node.output[0],
+                    var_node.output[0],
+                ],
                 [node_name],
-                name = node_name,
-                epsilon=0.00000001
+                name=node_name,
+                epsilon=0.00000001,
             )
             # Reconnect the graph
             replace_node_input(n, value_name, node_name)
             # Add node to the graph
-            g.node.extend([bn_node, scale_node, bias_node, mean_node, var_node])
+            g.node.extend(
+                [bn_node, scale_node, bias_node, mean_node, var_node]
+            )
+
         add_bn_after(input_node)
     topological_sort(g)
+
 
 def rename_output_name(g, original_name, new_name):
     # Output
@@ -1148,22 +1420,32 @@ def rename_output_name(g, original_name, new_name):
     for node in nodes:
         replace_node_input(node, original_name, new_name)
 
+
 def duplicate_param_shared_constant(g):
     for node in g.node:
         input_names = set()
         for n, input_node_name in enumerate(node.input):
-            param_data_node = helper.find_node_by_output_name(g, input_node_name)
-            if param_data_node is None or param_data_node.op_type != 'Constant':
+            param_data_node = helper.find_node_by_output_name(
+                g, input_node_name
+            )
+            if (
+                param_data_node is None
+                or param_data_node.op_type != "Constant"
+            ):
                 continue
             if param_data_node.name not in input_names:
                 input_names.add(input_node_name)
                 continue
-            
+
+            new_node_name = param_data_node.name + "_" + str(n)
+            helper.logger.debug(
+                f"Duplicating weight: {param_data_node.name} -> "
+                f"{new_node_name}"
+            )
             duplicated_node = copy.deepcopy(param_data_node)
-            new_node_name = param_data_node.name + '_' + str(n)
-            
+
             duplicated_node.name = new_node_name
             duplicated_node.output[0] = new_node_name
-            
+
             node.input[n] = new_node_name
             g.node.extend([duplicated_node])

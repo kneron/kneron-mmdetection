@@ -2,8 +2,11 @@
 """
 
 import logging
-import onnx.utils
-from onnx import optimizer
+
+try:
+    from onnx import optimizer
+except ImportError:
+    import onnxoptimizer as optimizer
 
 from . import helper
 from . import other
@@ -12,14 +15,22 @@ from . import eliminating
 from . import fusing
 from . import constant_folding
 from . import removing_transpose
-from . import modhelper
 from .common_pattern import torch_pattern_match, tf_pattern_match
+from .helper import logger
 
-def preprocess(model_proto, disable_fuse_bn=False):
+
+def preprocess(
+    model_proto, disable_fuse_bn=False, duplicate_shared_weights=True
+):
     """The most common used functions before other processing.
 
-    :param model_proto: the original model input\\
-    :return: the new model after preprocessing
+    Args:
+        model_proto: the original model input
+        duplicate_shared_weights(bool, optional): duplicate shared weights.
+                                                  Defaults to True.
+
+    Return:
+        the new model after preprocessing
 
     It includes:
 
@@ -49,28 +60,43 @@ def preprocess(model_proto, disable_fuse_bn=False):
     - fuse_pad_into_conv
 
     """
+    logger.info("Preprocessing the model...")
     helper.setup_current_opset_version(model_proto)
     eliminating.eliminate_empty_value_infos(model_proto.graph)
     other.add_name_to_node(model_proto.graph)
     other.rename_all_node_name(model_proto.graph)
     replacing.replace_initializer_with_Constant(model_proto.graph)
     other.topological_sort(model_proto.graph)
-    m = onnx.utils.polish_model(model_proto)
-    passes = ['extract_constant_to_initializer',
-              'eliminate_nop_dropout',
-              'eliminate_deadend',
-              'fuse_matmul_add_bias_into_gemm',
-              'fuse_pad_into_conv']
+    m = other.polish_model(model_proto)
+    passes = [
+        "extract_constant_to_initializer",
+        "eliminate_nop_dropout",
+        "eliminate_deadend",
+        "fuse_matmul_add_bias_into_gemm",
+        "fuse_pad_into_conv",
+    ]
     if not disable_fuse_bn:
-        passes.append('fuse_bn_into_conv')
+        passes.append("fuse_bn_into_conv")
     m = optimizer.optimize(m, passes)
     g = m.graph
-    replacing.replace_initializer_with_Constant(g)
-    other.duplicate_param_shared_constant(g)
+    # Add name again since onnx optimizer higher than 1.7 may remove node names
+    other.add_name_to_node(g)
+    if duplicate_shared_weights:
+        replacing.replace_initializer_with_Constant(
+            g, duplicate_shared_weights=True
+        )
+        other.duplicate_param_shared_constant(g)
+    else:
+        replacing.replace_initializer_with_Constant(
+            g, duplicate_shared_weights=False
+        )
     other.topological_sort(g)
-    m = onnx.utils.polish_model(m)
+    m = other.polish_model(m)
     g = m.graph
+    eliminating.eliminate_consecutive_Cast(m.graph)
+    eliminating.eliminate_Cast_after_input(m.graph)
     eliminating.eliminate_nop_pads(g)
+    eliminating.eliminate_nop_cast(g)
     eliminating.eliminate_Identify_and_Dropout(g)
     eliminating.eliminate_trivial_maxpool(g)
     eliminating.eliminate_no_children_input(g)
@@ -78,8 +104,7 @@ def preprocess(model_proto, disable_fuse_bn=False):
     other.topological_sort(g)
     m = other.inference_shapes(m)
     g = m.graph
-    if helper.get_current_opset_version() < 10:
-        replacing.replace_split_with_slices(g)
+    replacing.replace_split_with_slices(g)
     other.topological_sort(g)
 
     return m
@@ -100,7 +125,8 @@ def common_optimization(m):
     - replace Squeeze/Unsqueeze with Reshape
     - replace Reshape with Flatten
     """
-    m = onnx.utils.polish_model(m)
+    logger.info("Doing nodes fusion and replacement... ")
+    m = other.polish_model(m)
     g = m.graph
     other.transpose_B_in_Gemm(g)
     fusing.fuse_BN_into_Gemm(g)
@@ -108,10 +134,11 @@ def common_optimization(m):
     fusing.fuse_Gemm_into_Gemm(g)
     fusing.fuse_consecutive_reducemean(g)
     fusing.fuse_slice_nodes_into_conv(g)
+    fusing.fuse_relu_min_into_clip(g)
     other.duplicate_shared_Flatten(g)
     replacing.replace_average_pool_with_GAP(g)
 
-    m = onnx.utils.polish_model(m)
+    m = other.polish_model(m)
     g = m.graph
 
     replacing.replace_Squeeze_with_Reshape(g)
@@ -119,6 +146,7 @@ def common_optimization(m):
     replacing.replace_Reshape_with_Flatten(g)
     replacing.replace_ReduceMean_with_GlobalAveragePool(g)
     replacing.replace_Sum_with_Adds(g)
+    replacing.replace_constant_input_concat_with_pad(g)
     other.topological_sort(g)
     return m
 
@@ -131,7 +159,7 @@ def pytorch_constant_folding(m):
     :param m: the original model input\\
     :return: the new model after preprocessing
     """
-    logging.info("Working on Pytorch constant folding.")
+    logger.info("Working on constant folding.")
     replacing.replace_shape_with_constant(m.graph)
     replacing.replace_ConstantOfShape_with_constant(m.graph)
 
@@ -142,12 +170,12 @@ def pytorch_constant_folding(m):
         other.topological_sort(m.graph)
         while len(m.graph.value_info) != 0:
             m.graph.value_info.pop()
-        
+
         m = other.inference_shapes(m)
         replacing.replace_shape_with_constant(m.graph)
     other.topological_sort(m.graph)
     m = torch_pattern_match(m)
-    m = optimizer.optimize(m, ['eliminate_deadend'])
+    m = optimizer.optimize(m, ["eliminate_deadend"])
     return m
 
 
@@ -159,8 +187,6 @@ def tensorflow_optimization(m):
 
     It includes:
 
-    - eliminate consecutive Cast
-    - eliminate cast after input
     - eliminate shape change after input
     - eliminate Reshape cast
     - eliminate Squeeze before Reshape
@@ -168,13 +194,11 @@ def tensorflow_optimization(m):
     - replace Shape with Constant
     """
 
-    eliminating.eliminate_consecutive_Cast(m.graph)
     fusing.fuse_Transpose_into_Constant(m.graph)
     fusing.fuse_MatMul_and_Add_into_Gemm(m.graph)
-    eliminating.eliminate_Cast_after_input(m.graph)
     other.topological_sort(m.graph)
 
-    m = onnx.utils.polish_model(m)
+    m = other.polish_model(m)
 
     # constant folding
     replacing.replace_shape_with_constant(m.graph)
@@ -191,7 +215,7 @@ def tensorflow_optimization(m):
         replacing.replace_shape_with_constant(m.graph)
     other.topological_sort(m.graph)
     m = tf_pattern_match(m)
-    m = optimizer.optimize(m, ['eliminate_deadend'])
+    m = optimizer.optimize(m, ["eliminate_deadend"])
 
     eliminating.eliminate_consecutive_reshape(m.graph)
     eliminating.eliminate_Squeeze_before_Reshape(m.graph)
@@ -205,33 +229,39 @@ def postprocess(m):
     :param m: the original model input\\
     :return: the new model after preprocessing
     """
-    m = onnx.utils.polish_model(m)
+    logger.info("Postprocessing the model...")
+    while len(m.graph.value_info) > 0:
+        m.graph.value_info.pop()
+    m = other.polish_model(m)
     eliminating.eliminate_single_input_Concat(m.graph)
     eliminating.eliminate_nop_Maxpool_and_AveragePool(m.graph)
-
-    m = onnx.utils.polish_model(m)
+    eliminating.eliminate_trivial_elementwise_calculation(m.graph)
+    m = other.polish_model(m)
 
     replacing.replace_depthwise_1x1_with_bn(m.graph)
-    m = onnx.utils.polish_model(m)
+    m = other.polish_model(m)
 
     # removing transpose
     m = removing_transpose.eliminate_transposes(m)
-    m = onnx.utils.polish_model(m)
+    m = other.polish_model(m)
     removing_transpose.remove_trivial_transpose(m.graph)
     removing_transpose.fuse_Transpose_into_Gemm_weight(m.graph)
 
     # fuse some nodes
     fusing.fuse_mul_and_add_into_bn(m.graph)
-    m = onnx.utils.polish_model(m)
+    m = other.polish_model(m)
     fusing.fuse_mul_and_add_into_gemm(m.graph)
-    m = onnx.utils.polish_model(m)
+    m = other.polish_model(m)
     fusing.fuse_conv_and_add_into_conv(m.graph)
+    m = other.polish_model(m)
     replacing.replace_mul_to_bn(m.graph)
+    replacing.replace_div_to_bn(m.graph)
     replacing.replace_add_to_bn(m.graph)
     replacing.replace_sub_to_bn(m.graph)
-    m = onnx.utils.polish_model(m)
+    replacing.replace_sub_with_bn_and_add(m.graph)
+    m = other.polish_model(m)
 
     other.add_output_to_value_info(m.graph)
-    m = optimizer.optimize(m, ['eliminate_deadend'])
-    m.producer_name = 'kneron_formatter'
+    m = optimizer.optimize(m, ["eliminate_deadend"])
+    m.producer_name = "kneron_formatter"
     return m
