@@ -257,10 +257,124 @@ print("\nCompile done. Saved Nef file to '" + str(nef_model_path) + "'")
 
 You can find the NEF file at `/data1/batch_compile/models_720.nef`. `models_720.nef` is the final compiled model.
 
-# Step 6: Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on KL720
 
-* Check Kneron PLUS official document:
-  * Python API:
-    http://doc.kneron.com/docs/#plus_python/#_top
-  * C API:
-    http://doc.kneron.com/docs/#plus_c/getting_started/
+# Step 6: Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1) with MMDetectionKN API (Ubuntu only)
+
+Recommend you can read [Kneron PLUS official document](http://doc.kneron.com/docs/#plus_python/#_top) first.
+
+### Step 6-1: Download and Install PLUS python library(.whl)
+* Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
+* Scroll down to OpenMMLab Kneron Edition table
+* Select Kneron Plus v1.13.0 (pre-built python library)
+* Your OS version(Ubuntu, Windows, MacOS, Raspberry pi)
+* Download KneronPLUS-1.3.0-py3-none-any_{your_os}.whl
+* unzip downloaded `KneronPLUS-1.3.0-py3-none-any.whl.zip`
+* pip install KneronPLUS-1.3.0-py3-none-any.whl
+
+### Step 6-2: Run NEF on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1) with MMDetectionKN API (Ubuntu only)
+
+RUN the following python script (change `/PATH/TO/YOUR/720_NEF_MODEL.nef` and `/PATH/TO/YOUR/IMAGE.bmp` and `configs/yolox/yolox_s_8x8_300e_coco_img_norm.py` to yours)
+
+```python
+from mmdet.apis import (inference_detector_kn, init_detector, show_result_pyplot)
+from mmdet.models import build_detector
+import kp
+
+config_file = 'configs/yolox/yolox_s_8x8_300e_coco_img_norm.py'
+model = init_detector(config_file, device='cpu')
+
+device_group = kp.core.connect_devices(usb_port_ids=[0])
+model_nef_descriptor = kp.core.load_model_from_file(device_group=device_group,
+                                                            file_path='/PATH/TO/YOUR/720_NEF_MODEL.nef')
+generic_raw_image_header = kp.GenericRawImageHeader(
+    model_id=model_nef_descriptor.models[0].id,
+    resize_mode=kp.ResizeMode.KP_RESIZE_ENABLE,
+    padding_mode=kp.PaddingMode.KP_PADDING_CORNER,
+    normalize_mode=kp.NormalizeMode.KP_NORMALIZE_KNERON,
+    inference_number=0
+)
+kp_params = {
+    'device_group' : device_group,
+    'model_nef_descriptor': model_nef_descriptor,
+    'generic_raw_image_header': generic_raw_image_header
+}
+res = inference_detector_kn(model, '/PATH/TO/YOUR/IMAGE.bmp', kneron_plus_params = kp_params)
+
+show_result_pyplot(
+    model,
+     '/PATH/TO/YOUR/IMAGE.bmp',
+    res,
+    score_thr=0.3)
+
+```
+
+# Step 7 (For Kneron AI Competition 2022): Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
+
+Recommend you can read [Kneron PLUS official document](http://doc.kneron.com/docs/#plus_python/#_top) first.
+
+### Step 7-1: Download and Install PLUS python library(.whl)
+* Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
+* Scroll down to OpenMMLab Kneron Edition table
+* Select Kneron Plus v1.13.0 (pre-built python library)
+* Your OS version(Ubuntu, Windows, MacOS, Raspberry pi)
+* Download KneronPLUS-1.3.0-py3-none-any_{your_os}.whl
+* unzip downloaded `KneronPLUS-1.3.0-py3-none-any.whl.zip`
+* pip install KneronPLUS-1.3.0-py3-none-any.whl
+
+### Step 7-2: Download YoloX example code
+* Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
+* Scroll down to OpenMMLab Kneron Edition table
+* Select MMDetectionKN
+* Download yolox_plus_demo.zip 
+* unzip downloaded `yolox_plus_demo`
+
+### Step 7-3: Test enviroment is ready (require [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1))
+In `yolox_plus_demo`, we provide a yolo example model and image for quick test. 
+* Plug in [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1) into your computer USB port
+* Go to the yolox_plus_demo folder
+```bash
+cd /PATH/TO/yolox_plus_demo
+```
+
+* Install required library
+```bash
+pip insall -r requirements.txt
+```
+
+* Run example on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
+```python
+python KL720DemoGenericInferenceYoloX_BypassHwPreProc.py -img ./000000000536.jpg -nef ./example_yolox_720.nef
+```
+
+Then you can see the inference result is saved as output_000000000536.jpg in the same folder.
+And the expected result of the command above will be something similar to the following text:
+```plain
+...
+[Connect Device]
+ - Success
+[Set Device Timeout]
+ - Success
+[Upload Model]
+ - Success
+[Read Image]
+ - Success
+[Starting Inference Work]
+ - Starting inference loop 1 times
+ - .
+[Retrieve Inference Node Output ]
+ - Success
+[Output Result Image]
+ - Output bounding boxes on 'output_000000000536.jpg'
+(291.7100891113281,135.5036407470703,444.81996459960936,331.6263565063477)
+(86.29214324951171,75.08173713684083,178.1478744506836,331.3882736206055)
+(168.07337951660156,81.79956779479981,274.36656799316404,331.9453491210938)
+...
+```
+
+### Step 7-4: Run your NEF model and your image on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
+Use the same script in previous step, but now we change the input NEF model path and image to yours
+```bash
+python KL720DemoGenericInferenceYoloX_BypassHwPreProc.py -img /PATH/TO/YOUR_IMAGE.bmp -nef /PATH/TO/YOUR/720_NEF_MODEL.nef
+```
+
+
