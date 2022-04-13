@@ -14,9 +14,8 @@ model = dict(
         norm_cfg=dict(type='BN', requires_grad=False),
         norm_eval=True,
         style='pytorch',
-        init_cfg=dict(type='Pretrained', 
-        checkpoint='pretrained/resnet50.pth'
-        )), 
+        init_cfg=dict(type='Pretrained',
+                      checkpoint='pretrained/resnet50.pth')),
     neck=dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
@@ -58,8 +57,9 @@ model = dict(
         score_thr=0.05,
         nms=dict(type='nms', iou_threshold=0.5),
         max_per_img=100))
-        
-img_norm_cfg = dict(mean=[128.0, 128.0, 128.0], std=[256.0, 256.0, 256.0], to_rgb=True)
+
+img_norm_cfg = dict(
+    mean=[128.0, 128.0, 128.0], std=[256.0, 256.0, 256.0], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
@@ -96,6 +96,7 @@ data = dict(
     train=dict(pipeline=train_pipeline),
     val=dict(pipeline=test_pipeline),
     test=dict(pipeline=test_pipeline))
+
 # learning policy
 lr_config = dict(
     policy='step',
@@ -105,11 +106,8 @@ lr_config = dict(
     step=[16, 22])
 runner = dict(type='EpochBasedRunner', max_epochs=24)
 
-
-
 # optimizer
 optimizer = dict(
     lr=0.01, paramwise_cfg=dict(bias_lr_mult=2., bias_decay_mult=0.))
 optimizer_config = dict(
     _delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
-

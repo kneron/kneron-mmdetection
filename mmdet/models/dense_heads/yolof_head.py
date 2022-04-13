@@ -1,4 +1,4 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 import torch.nn as nn
@@ -126,12 +126,11 @@ class YOLOFHead(AnchorHead):
         bbox_reg = self.bbox_pred(reg_feat)
         objectness = self.object_pred(reg_feat)
 
-        
         # implicit objectness
         objectness = objectness.view(N, -1, 1, H, W)
         normalized_cls_score = cls_score + objectness - torch.log(
             1. + torch.clamp(cls_score.exp(), max=INF, min=float('-inf')) +
-            torch.clamp(objectness.exp(), max=INF,min=float('-inf')))
+            torch.clamp(objectness.exp(), max=INF, min=float('-inf')))
         normalized_cls_score = normalized_cls_score.view(N, -1, H, W)
         return normalized_cls_score, bbox_reg
 

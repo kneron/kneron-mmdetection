@@ -1,8 +1,7 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from mmcv.cnn import ConvModule
 from mmcv.runner import BaseModule, auto_fp16
 
@@ -10,7 +9,7 @@ from ..builder import NECKS
 
 
 @NECKS.register_module()
-class FcosNeckKneron(BaseModule):
+class FCOSNeckKneron(BaseModule):
     r"""Feature Pyramid Network.
 
     This is an implementation of paper `Feature Pyramid Networks for Object
@@ -79,7 +78,7 @@ class FcosNeckKneron(BaseModule):
                  upsample_cfg=dict(mode='nearest'),
                  init_cfg=dict(
                      type='Xavier', layer='Conv2d', distribution='uniform')):
-        super(FcosNeckKneron, self).__init__(init_cfg)
+        super(FCOSNeckKneron, self).__init__(init_cfg)
         assert isinstance(in_channels, list)
         self.in_channels = in_channels
         self.mid_channels = mid_channels
@@ -111,11 +110,11 @@ class FcosNeckKneron(BaseModule):
 
         self.lateral_convs = nn.ModuleList()
         self.fpn_convs = nn.ModuleList()
-        kernel_sizes=(5, 9)
+        kernel_sizes = (5, 9)
         self.poolings = nn.ModuleList([
             nn.MaxPool2d(kernel_size=ks, stride=1, padding=ks // 2)
             for ks in kernel_sizes
-        ])  
+        ])
         for i in range(self.start_level, self.backbone_end_level):
             l_conv = ConvModule(
                 in_channels[i],
@@ -125,7 +124,7 @@ class FcosNeckKneron(BaseModule):
                 norm_cfg=norm_cfg if not self.no_norm_on_lateral else None,
                 act_cfg=act_cfg,
                 inplace=False)
-            
+
             fpn_conv = ConvModule(
                 mid_channels[i]*3,
                 out_channels[i],
@@ -137,7 +136,6 @@ class FcosNeckKneron(BaseModule):
                 inplace=False)
             self.lateral_convs.append(l_conv)
             self.fpn_convs.append(fpn_conv)
-        print()
 
     @auto_fp16()
     def forward(self, inputs):
@@ -157,8 +155,10 @@ class FcosNeckKneron(BaseModule):
         outs = []
         for i in range(used_backbone_levels):
             x = laterals[i]
-            x = torch.cat([x] + [pooling(x) for pooling in self.poolings], dim=1)
-            x =self.fpn_convs[i](x) 
+            x = torch.cat(
+                [x] + [pooling(x) for pooling in self.poolings],
+                dim=1
+            )
+            x = self.fpn_convs[i](x)
             outs.append(x)
         return tuple(outs)
-        

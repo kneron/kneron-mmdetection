@@ -11,8 +11,8 @@ model = dict(
         num_stages=4,
         out_indices=(3, ),
         frozen_stages=-1,
-        norm_cfg=dict(type='BN', requires_grad=False), # no grad (beta, gamma), assume the statistics is done
-        norm_eval=False, #do the statistics analysis
+        norm_cfg=dict(type='BN', requires_grad=False),
+        norm_eval=False,
         style='pytorch'),
     neck=dict(
         type='DilatedEncoder',
@@ -76,9 +76,6 @@ optimizer = dict(
 optimizer_config = dict(
     _delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
 lr_config = dict(warmup_iters=1500, warmup_ratio=0.00066667)
-# use caffe img_norm
-#img_norm_cfg = dict(
-#    mean=[103.530, 116.280, 123.675], std=[1.0, 1.0, 1.0], to_rgb=False)
 img_norm_cfg = dict(
     mean=[128.0, 128.0, 128.0], std=[256.0, 256.0, 256.0], to_rgb=True)
 train_pipeline = [
