@@ -3,7 +3,7 @@
 
 ## Introduction
 
-  [MMDetectionKN](https://github.com/kneron/MMDetectionKN) is a platform built upon the well-known [MMDetection](https://github.com/open-mmlab/mmdetection) for detection and instance segmentation. We encourage you to start with [YOLOX: Step-By-Step](docs_kneron/yolox_step_by_step.md) to build basic knowledge of Kneron-Edition MMDetection, and read [MMDetection docs](https://mmdetection.readthedocs.io/en/latest/) for detailed MMDetection usage. 
+  [kneron-mmdetection](https://github.com/kneron/kneron-mmdetection) is a platform built upon the well-known [mmdetection](https://github.com/open-mmlab/mmdetection) for detection and instance segmentation. We encourage you to start with [YOLOX: Step-By-Step](docs_kneron/yolox_step_by_step.md) to build basic knowledge of Kneron-Edition mmdetection, and read [mmdetection docs](https://mmdetection.readthedocs.io/en/latest/) for detailed mmdetection usage.
 
   In this repository, we provide an end-to-end training/deployment flow to realize on Kneron's AI accelerators: 
 
@@ -49,18 +49,18 @@ N/A
 - [Kneron Toolchain Step-By-Step (YOLOv3)](http://doc.kneron.com/docs/#toolchain/yolo_example/)
 - [Kneron Toolchain Manual](http://doc.kneron.com/docs/#toolchain/manual/#0-overview)
 
-### Original MMDetection Documents
-- [Original MMDetection getting started](https://github.com/open-mmlab/mmdetection#getting-started): It is recommended to read the original MMDetection getting started documents for other MMDetection operations.
-- [Original MMDetection readthedoc](https://mmdetection.readthedocs.io/en/latest/): Original MMDetection documents.
+### Original mmdetection Documents
+- [Original mmdetection getting started](https://github.com/open-mmlab/mmdetection#getting-started): It is recommended to read the original mmdetection getting started documents for other mmdetection operations.
+- [Original mmdetection readthedoc](https://mmdetection.readthedocs.io/en/latest/): Original mmdetection documents.
 
 ## Contributing
-[MMDetectionKN](https://github.com/kneron/MMDetectionKN) a platform built upon [OpenMMLab-MMDetection](https://github.com/open-mmlab/mmdetection)
+[kneron-mmdetection](https://github.com/kneron/kneron-mmdetection) a platform built upon [OpenMMLab-mmdetection](https://github.com/open-mmlab/mmdetection)
 
-- For issues regarding to the original [MMDetection](https://github.com/open-mmlab/mmdetection):
-We appreciate all contributions to improve [OpenMMLab-MMDetection](https://github.com/open-mmlab/mmdetection). Ongoing projects can be found in out [GitHub Projects](https://github.com/open-mmlab/mmdetection/projects). Welcome community users to participate in these projects. Please refer to [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the contributing guideline.
+- For issues regarding to the original [mmdetection](https://github.com/open-mmlab/mmdetection):
+We appreciate all contributions to improve [OpenMMLab-mmdetection](https://github.com/open-mmlab/mmdetection). Ongoing projects can be found in out [GitHub Projects](https://github.com/open-mmlab/mmdetection/projects). Welcome community users to participate in these projects. Please refer to [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the contributing guideline.
 
-- For issues regarding to this repository [MMDetectionKN](https://github.com/kneron/MMDetectionKN): Welcome to leave the comment or submit pull requests here to improve MMDetectionKN
+- For issues regarding to this repository [kneron-mmdetection](https://github.com/kneron/kneron-mmdetection): Welcome to leave the comment or submit pull requests here to improve kneron-mmdetection
 
 
 ## Related Projects
-- MMSegmentationKN: Kneron training/deployment platform on [OpenMMLab -mmSegmentation](https://github.com/open-mmlab/mmsegmentation) semantic segmentation toolbox
+- kneron-mmsegmentation: Kneron training/deployment platform on [OpenMMLab - mmSegmentation](https://github.com/open-mmlab/kneron-mmsegmentation) semantic segmentation toolbox

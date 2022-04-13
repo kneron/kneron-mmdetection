@@ -12,7 +12,7 @@
 If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
 
 
-### Install MMDetectionKN
+### Install kneron-mmdetection
 
 1. We recommend you installing mmcv-full with pip:
 
@@ -28,14 +28,14 @@ If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
 
     See [here](https://github.com/open-mmlab/mmcv#install-with-pip) for different versions of MMCV compatible to different PyTorch and CUDA versions.
 
-2. Clone the Kneron-version MMDetection (MMDetectionKN) repository.
+2. Clone the Kneron-version mmdetection (kneron-mmdetection) repository.
 
     ```bash
-    git clone https://github.com/kneron/MMDetectionKN
-    cd MMDetectionKN
+    git clone https://github.com/kneron/kneron-mmdetection
+    cd kneron-mmdetection
     ```
 
-3. Install required python packages for building MMDetectionKN and then install MMDetectionKN.
+3. Install required python packages for building kneron-mmdetection and then install kneron-mmdetection.
 
     ```shell
     pip install -r requirements/build.txt
@@ -52,7 +52,7 @@ MMDetection provides hundreds of detection models in [Model Zoo](https://mmdetec
 
 ## Train YOLOX on COCO detection dataset
 
-MMDetection provides out-of-the-box tools for training detection models.
+mmdetection provides out-of-the-box tools for training detection models.
 This section will show how to train models (under [configs](https://github.com/open-mmlab/mmdetection/tree/master/configs)) on COCO.
 
 **Important**: You might need to modify the [config file](https://github.com/open-mmlab/mmdetection/blob/5e246d5e3bc3310b5c625fb57bc03d2338ca39bc/docs/en/tutorials/config.md) according your GPUs resource (such as `samples_per_gpu`, `workers_per_gpu` ...etc due to your GPUs RAM limitation).
@@ -258,9 +258,11 @@ print("\nCompile done. Saved Nef file to '" + str(nef_model_path) + "'")
 You can find the NEF file at `/data1/batch_compile/models_720.nef`. `models_720.nef` is the final compiled model.
 
 
-# Step 6: Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1) with MMDetectionKN API (Ubuntu only)
+# Step 6: Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
 
-Recommend you can read [Kneron PLUS official document](http://doc.kneron.com/docs/#plus_python/#_top) first.
+[WARNING] Don't do this step in toolchain docker enviroment mention in Step 5
+
+Recommend you read [Kneron PLUS official document](http://doc.kneron.com/docs/#plus_python/#_top) first.
 
 ### Step 6-1: Download and Install PLUS python library(.whl)
 * Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
@@ -271,7 +273,7 @@ Recommend you can read [Kneron PLUS official document](http://doc.kneron.com/doc
 * unzip downloaded `KneronPLUS-1.3.0-py3-none-any.whl.zip`
 * pip install KneronPLUS-1.3.0-py3-none-any.whl
 
-### Step 6-2: Run NEF on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1) with MMDetectionKN API (Ubuntu only)
+### Step 6-2: Run NEF on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1) with kneron-mmdetection API (Ubuntu only)
 
 RUN the following python script (change `/PATH/TO/YOUR/720_NEF_MODEL.nef` and `/PATH/TO/YOUR/IMAGE.bmp` and `configs/yolox/yolox_s_8x8_300e_coco_img_norm.py` to yours)
 
@@ -310,7 +312,9 @@ show_result_pyplot(
 
 # Step 7 (For Kneron AI Competition 2022): Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
 
-Recommend you can read [Kneron PLUS official document](http://doc.kneron.com/docs/#plus_python/#_top) first.
+[WARNING] Don't do this step in toolchain docker enviroment mention in Step 5
+
+Recommend you read [Kneron PLUS official document](http://doc.kneron.com/docs/#plus_python/#_top) first.
 
 ### Step 7-1: Download and Install PLUS python library(.whl)
 * Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
@@ -324,7 +328,7 @@ Recommend you can read [Kneron PLUS official document](http://doc.kneron.com/doc
 ### Step 7-2: Download YoloX example code
 * Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
 * Scroll down to OpenMMLab Kneron Edition table
-* Select MMDetectionKN
+* Select kneron-mmdetection
 * Download yolox_plus_demo.zip 
 * unzip downloaded `yolox_plus_demo`
 

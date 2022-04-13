@@ -12,7 +12,7 @@
 If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
 
 
-### Install MMDetectionKN
+### Install kneron-mmdetection
 
 1. We recommend you installing mmcv-full with pip:
 
@@ -28,14 +28,14 @@ If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
 
     See [here](https://github.com/open-mmlab/mmcv#install-with-pip) for different versions of MMCV compatible to different PyTorch and CUDA versions.
 
-2. Clone the Kneron-version MMDetection (MMDetectionKN) repository.
+2. Clone the Kneron-version MMDetection (kneron-mmdetection) repository.
 
     ```bash
     git clone https://github.com/kneron/AI_Training_mmDetection.git
     cd AI_Training_mmDetection
     ```
 
-3. Install required python packages for building MMDetectionKN and then install MMDetectionKN.
+3. Install required python packages for building kneron-mmdetection and then install kneron-mmdetection.
 
     ```shell
     pip install -r requirements/build.txt
@@ -263,8 +263,4 @@ You can find the NEF file at `/data1/batch_compile/models_720.nef`. `models_720.
 
 # Step 6: Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on KL720
 
-* Check Kneron PLUS official document:
-  * Python API:
-    http://doc.kneron.com/docs/#plus_python/#_top
-  * C API:
-    http://doc.kneron.com/docs/#plus_c/getting_started/
+* N/A
