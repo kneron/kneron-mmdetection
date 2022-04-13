@@ -73,32 +73,32 @@ class SingleStageDetector(BaseDetector):
         outs = self.bbox_head(x)
         return outs
 
-    def forward_kneron(self, img, img_metas, rescale=False, return_loss=False):
-
-        for var, name in [(img, "imgs"), (img_metas, "img_metas")]:
-            if not isinstance(var, list):
-                raise TypeError(f"{name} must be a list, but got {type(var)}")
-
-        num_augs = len(img)
-        if num_augs != len(img_metas):
-            raise ValueError(
-                f"num of augmentations ({len(img)}) "
-                f"!= num of image meta ({len(img_metas)})"
-            )
-
-        # NOTE the batched image size information may be useful, e.g.
-        # in DETR, this is needed for the construction of masks, which is
-        # then used for the transformer_head.
-        for im, img_meta in zip(img, img_metas):
-            batch_size = len(img_meta)
-            for img_id in range(batch_size):
-                img_meta[img_id]["batch_input_shape"] = tuple(im.size()[-2:])
-
-        outs = None
-        if "proposals" in img_meta:
-            img_meta["proposals"] = img_meta["proposals"][0]
-        img = img[0]
-        img_metas = img_metas[0]
+    def forward_kneron(self, img, img_metas, rescale=False, return_loss=False, tracking=False):
+        if not tracking:
+            for var, name in [(img, "imgs"), (img_metas, "img_metas")]:
+                if not isinstance(var, list):
+                    raise TypeError(f"{name} must be a list, but got {type(var)}")
+    
+            num_augs = len(img)
+            if num_augs != len(img_metas):
+                raise ValueError(
+                    f"num of augmentations ({len(img)}) "
+                    f"!= num of image meta ({len(img_metas)})"
+                )
+    
+            # NOTE the batched image size information may be useful, e.g.
+            # in DETR, this is needed for the construction of masks, which is
+            # then used for the transformer_head.
+            for im, img_meta in zip(img, img_metas):
+                batch_size = len(img_meta)
+                for img_id in range(batch_size):
+                    img_meta[img_id]["batch_input_shape"] = tuple(im.size()[-2:])
+    
+            outs = None
+            if "proposals" in img_meta:
+                img_meta["proposals"] = img_meta["proposals"][0]
+            img = img[0]
+            img_metas = img_metas[0]
 
         results_list = None
         if hasattr(self, "__Kn_ONNX_Sess__"):
