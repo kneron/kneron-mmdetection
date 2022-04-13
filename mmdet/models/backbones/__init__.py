@@ -1,4 +1,4 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 from .csp_darknet import CSPDarknet
 from .darknet import Darknet
@@ -17,12 +17,11 @@ from .ssd_vgg import SSDVGG
 from .swin import SwinTransformer
 from .trident_resnet import TridentResNet
 from .fcos_vgg import FCOS_VGG
-from .rr_yolov5_backbone import RRYoloV5Backbone
 
 __all__ = [
     'RegNet', 'ResNet', 'ResNetV1d', 'ResNeXt', 'SSDVGG', 'HRNet',
     'MobileNetV2', 'Res2Net', 'HourglassNet', 'DetectoRS_ResNet',
-    'DetectoRS_ResNeXt', 'Darknet', 'ResNeSt', 'TridentResNet', 'CSPDarknet',
-    'SwinTransformer', 'PyramidVisionTransformer', 'PyramidVisionTransformerV2',
-    'FCOS_VGG', 'RRYoloV5Backbone',
+    'DetectoRS_ResNeXt', 'Darknet', 'ResNeSt', 'TridentResNet',
+    'CSPDarknet', 'SwinTransformer', 'PyramidVisionTransformer',
+    'PyramidVisionTransformerV2', 'FCOS_VGG',
 ]
