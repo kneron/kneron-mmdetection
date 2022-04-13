@@ -1,7 +1,12 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
-from .inference import (async_inference_detector, inference_detector, inference_detector_kn,
-                        init_detector, show_result_pyplot)
+from .inference import (
+    async_inference_detector,
+    inference_detector,
+    inference_detector_kn,
+    init_detector,
+    show_result_pyplot
+)
 from .test import multi_gpu_test, single_gpu_test
 from .train import (get_root_logger, init_random_seed, set_random_seed,
                     train_detector)
@@ -9,5 +14,6 @@ from .train import (get_root_logger, init_random_seed, set_random_seed,
 __all__ = [
     'get_root_logger', 'set_random_seed', 'train_detector', 'init_detector',
     'async_inference_detector', 'inference_detector', 'show_result_pyplot',
-    'multi_gpu_test', 'single_gpu_test', 'init_random_seed'
+    'multi_gpu_test', 'single_gpu_test', 'init_random_seed',
+    'inference_detector_kn',
 ]

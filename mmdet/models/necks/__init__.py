@@ -1,4 +1,4 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 from .bfp import BFP
 from .channel_mapper import ChannelMapper
@@ -15,11 +15,11 @@ from .rfp import RFP
 from .ssd_neck import SSDNeck
 from .yolo_neck import YOLOV3Neck
 from .yolox_pafpn import YOLOXPAFPN
-from .fcos_neck_kneron import FcosNeckKneron
+from .fcos_neck_kneron import FCOSNeckKneron
 
 __all__ = [
     'FPN', 'BFP', 'ChannelMapper', 'HRFPN', 'NASFPN', 'FPN_CARAFE', 'PAFPN',
     'NASFCOS_FPN', 'RFP', 'YOLOV3Neck', 'FPG', 'DilatedEncoder',
     'CTResNetNeck', 'SSDNeck', 'YOLOXPAFPN',
-    'FcosNeckKneron'
+    'FCOSNeckKneron'
 ]

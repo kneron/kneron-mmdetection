@@ -1,6 +1,5 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as cp
@@ -10,7 +9,8 @@ from torch.nn.modules.batchnorm import _BatchNorm
 from mmcv.cnn import ConvModule
 
 from ..builder import BACKBONES
-      
+
+
 class Focus(BaseModule):
     """Focus width and height information into channel space.
 
@@ -64,7 +64,9 @@ class Focus(BaseModule):
         )
         return self.conv(x)
 
+
 class VggLayer(BaseModule):
+
     def __init__(self,
                  inplanes,
                  outplanes,
@@ -83,11 +85,12 @@ class VggLayer(BaseModule):
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
         self.conv1_stride = stride
-        self.norm1_name, norm1 = build_norm_layer(norm_cfg, outplanes , postfix=1)    
+        self.norm1_name, norm1 = build_norm_layer(
+            norm_cfg, outplanes, postfix=1)
         self.conv1 = build_conv_layer(
             conv_cfg,
             inplanes,
-            outplanes ,
+            outplanes,
             kernel_size=kernel_size,
             stride=self.conv1_stride,
             padding=(kernel_size - 1) // 2)
@@ -101,16 +104,19 @@ class VggLayer(BaseModule):
 
     def forward(self, x):
         """Forward function."""
+
         def _inner_forward(x):
             out = self.conv1(x)
             out = self.norm1(out)
             out = self.LeakyRelu(out)
             return out
+
         if self.with_cp and x.requires_grad:
             out = cp.checkpoint(_inner_forward, x)
         else:
             out = _inner_forward(x)
         return out
+
 
 @BACKBONES.register_module()
 class FCOS_VGG(BaseModule):
@@ -148,6 +154,7 @@ class FCOS_VGG(BaseModule):
         init_cfg (dict or list[dict], optional): Initialization config dict.
             Default: None
     """
+
     def __init__(self,
                  in_channels=3,
                  stem_channels=None,
@@ -155,7 +162,7 @@ class FCOS_VGG(BaseModule):
                  strides=(2, 1, 2, 2, 2),
                  dilations=(1, 1, 1, 1, 1),
                  out_indices=(0, 1, 2, 3),
-                 out_planes=(64, 64,128,196,128),
+                 out_planes=(64, 64, 128, 196, 128),
                  avg_down=False,
                  frozen_stages=-1,
                  conv_cfg=None,
@@ -191,7 +198,7 @@ class FCOS_VGG(BaseModule):
             conv_cfg=conv_cfg,
             norm_cfg=norm_cfg,
             act_cfg=act_cfg)
-        
+
         self.vgg_layers = []
         for i in range(len(out_planes)):
             stride = strides[i]
@@ -244,6 +251,3 @@ class FCOS_VGG(BaseModule):
                 # trick: eval have effect on BatchNorm only
                 if isinstance(m, _BatchNorm):
                     m.eval()
-
-
-

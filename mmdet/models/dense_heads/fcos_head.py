@@ -1,3 +1,4 @@
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 
@@ -157,7 +158,7 @@ class FCOSHead(AnchorFreeHead):
             bbox_pred = bbox_pred.clamp(min=0)
             if not self.training:
                 bbox_pred *= stride
-        elif torch.onnx.is_in_onnx_export(): 
+        elif torch.onnx.is_in_onnx_export():
             bbox_pred = bbox_pred
         else:
             bbox_pred = bbox_pred.exp()

@@ -1,4 +1,4 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 import inspect
@@ -898,6 +898,7 @@ class RandomCrop:
         repr_str += f'bbox_clip_border={self.bbox_clip_border})'
         return repr_str
 
+
 @PIPELINES.register_module()
 class Rotate90:
     """Random crop the image & bboxes & masks.
@@ -968,57 +969,64 @@ class Rotate90:
             sin_angle = np.abs(M[0, 1])
 
             # Compute the new bounding dimensions of the image.
-            img_width_new = int(img_height * sin_angle + img_width * cos_angle)
-            img_height_new = int(img_height * cos_angle + img_width * sin_angle)
+            img_w_new = int(img_height * sin_angle + img_width * cos_angle)
+            img_h_new = int(img_height * cos_angle + img_width * sin_angle)
 
             # Adjust the rotation matrix to take into account the translation.
-            M[1, 2] += (img_height_new - img_height) / 2
-            M[0, 2] += (img_width_new - img_width) / 2
+            M[1, 2] += (img_h_new - img_height) / 2
+            M[0, 2] += (img_w_new - img_width) / 2
 
             # Rotate the image.
             img = cv2.warpAffine(img,
-                                M=M,
-                                dsize=(img_width_new, img_height_new))        
+                                 M=M,
+                                 dsize=(img_w_new, img_h_new))
             img_shape = img.shape
             results[key] = img
         results['img_shape'] = img_shape
- 
+
         # crop bboxes accordingly and clip to the image boundary
         for key in results.get('bbox_fields', []):
-            labels = results[key] 
-            
-            xmin = 0#self.labels_format['xmin']
-            ymin = 1#self.labels_format['ymin']
-            xmax = 2#self.labels_format['xmax']
-            ymax = 3#self.labels_format['ymax']
+            labels = results[key]
+
+            xmin = 0  # self.labels_format['xmin']
+            ymin = 1  # self.labels_format['ymin']
+            xmax = 2  # self.labels_format['xmax']
+            ymax = 3  # self.labels_format['ymax']
 
             labels = np.copy(labels)
             # Rotate the bounding boxes accordingly.
-            # Transform two opposite corner points of the rectangular boxes using the rotation matrix `M`.
-            toplefts = np.array([labels[:,xmin], labels[:,ymin], np.ones(labels.shape[0])])
-            bottomrights = np.array([labels[:,xmax], labels[:,ymax], np.ones(labels.shape[0])])
+            # Transform two opposite corner points of
+            # the rectangular boxes using the rotation matrix `M`.
+            toplefts = np.array(
+                [labels[:, xmin], labels[:, ymin], np.ones(labels.shape[0])]
+            )
+            bottomrights = np.array(
+                [labels[:, xmax], labels[:, ymax], np.ones(labels.shape[0])]
+            )
             new_toplefts = (np.dot(M, toplefts)).T
             new_bottomrights = (np.dot(M, bottomrights)).T
-            labels[:,[xmin,ymin]] = np.round(new_toplefts, decimals=0).astype(np.int)
-            labels[:,[xmax,ymax]] = np.round(new_bottomrights, decimals=0).astype(np.int)
+            labels[:, [xmin, ymin]] = np.round(
+                new_toplefts, decimals=0
+            ).astype(np.int)
+            labels[:, [xmax, ymax]] = np.round(
+                new_bottomrights, decimals=0
+            ).astype(np.int)
 
             if self.angle == 90:
                 # ymin and ymax were switched by the rotation.
-                labels[:,[ymax,ymin]] = labels[:,[ymin,ymax]]
+                labels[:, [ymax, ymin]] = labels[:, [ymin, ymax]]
             elif self.angle == 180:
                 # ymin and ymax were switched by the rotation,
                 # and also xmin and xmax were switched.
-                labels[:,[ymax,ymin]] = labels[:,[ymin,ymax]]
-                labels[:,[xmax,xmin]] = labels[:,[xmin,xmax]]
+                labels[:, [ymax, ymin]] = labels[:, [ymin, ymax]]
+                labels[:, [xmax, xmin]] = labels[:, [xmin, xmax]]
             elif self.angle == 270:
                 # xmin and xmax were switched by the rotation.
-                labels[:,[xmax,xmin]] = labels[:,[xmin,xmax]]
-                
+                labels[:, [xmax, xmin]] = labels[:, [xmin, xmax]]
+
             results[key] = labels
 
         return results
-
-
 
     def __call__(self, results):
         """Call function to randomly crop images, bounding boxes, masks,
@@ -1031,8 +1039,6 @@ class Rotate90:
             dict: Randomly cropped results, 'img_shape' key in result dict is
                 updated according to crop size.
         """
-
-
         results = self._rotate_data(results, self.angle)
         return results
 
@@ -1040,7 +1046,8 @@ class Rotate90:
         repr_str = self.__class__.__name__
         repr_str += f'(angle={self.angle}, '
         return repr_str
-    
+
+
 @PIPELINES.register_module()
 class SegRescale:
     """Rescale semantic segmentation maps.

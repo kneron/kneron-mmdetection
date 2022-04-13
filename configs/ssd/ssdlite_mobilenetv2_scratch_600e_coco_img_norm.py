@@ -67,7 +67,8 @@ cudnn_benchmark = True
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
-img_norm_cfg = dict(mean=[128.0, 128.0, 128.0], std=[256.0, 256.0, 256.0], to_rgb=True)
+img_norm_cfg = dict(
+    mean=[128.0, 128.0, 128.0], std=[256.0, 256.0, 256.0], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
@@ -100,7 +101,7 @@ test_pipeline = [
         img_scale=(320, 320),
         flip=False,
         transforms=[
-            dict(type='Resize', keep_ratio=False),        
+            dict(type='Resize', keep_ratio=False),
             dict(type='Pad', size_divisor=320),
             dict(type='Normalize', **img_norm_cfg),
             dict(type='ImageToTensor', keys=['img']),
