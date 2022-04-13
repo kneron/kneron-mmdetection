@@ -196,7 +196,7 @@ if __name__ == '__main__':
         author='Kneron Corporation',
         author_email='',
         keywords='computer vision, object detection',
-        url='https://github.com/kneron/MMDetectionKN',
+        url='https://github.com/kneron/kneron-mmdetection',
         packages=find_packages(exclude=('configs', 'tools', 'demo')),
         include_package_data=True,
         classifiers=[
