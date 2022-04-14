@@ -329,6 +329,7 @@ Recommend you read [Kneron PLUS official document](http://doc.kneron.com/docs/#p
 * Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
 * Scroll down to OpenMMLab Kneron Edition table
 * Select kneron-mmdetection
+* Select YoloX
 * Download yolox_plus_demo.zip 
 * unzip downloaded `yolox_plus_demo`
 
