@@ -260,7 +260,7 @@ You can find the NEF file at `/data1/batch_compile/models_720.nef`. `models_720.
 
 # Step 6: Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
 
-[WARNING] Don't do this step in toolchain docker enviroment mention in Step 5
+[WARNING] Don't do this step in toolchain docker enviroment mentioned in Step 5
 
 Recommend you read [Kneron PLUS official document](http://doc.kneron.com/docs/#plus_python/#_top) first.
 
@@ -268,7 +268,7 @@ Recommend you read [Kneron PLUS official document](http://doc.kneron.com/docs/#p
 * Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
 * Scroll down to OpenMMLab Kneron Edition table
 * Select Kneron Plus v1.13.0 (pre-built python library)
-* Your OS version(Ubuntu, Windows, MacOS, Raspberry pi)
+* Select your OS version(Ubuntu, Windows, MacOS, Raspberry pi)
 * Download KneronPLUS-1.3.0-py3-none-any_{your_os}.whl
 * unzip downloaded `KneronPLUS-1.3.0-py3-none-any.whl.zip`
 * pip install KneronPLUS-1.3.0-py3-none-any.whl
@@ -312,7 +312,7 @@ show_result_pyplot(
 
 # Step 7 (For Kneron AI Competition 2022): Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
 
-[WARNING] Don't do this step in toolchain docker enviroment mention in Step 5
+[WARNING] Don't do this step in toolchain docker enviroment mentioned in Step 5
 
 Recommend you read [Kneron PLUS official document](http://doc.kneron.com/docs/#plus_python/#_top) first.
 
@@ -320,7 +320,7 @@ Recommend you read [Kneron PLUS official document](http://doc.kneron.com/docs/#p
 * Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
 * Scroll down to OpenMMLab Kneron Edition table
 * Select Kneron Plus v1.13.0 (pre-built python library)
-* Your OS version(Ubuntu, Windows, MacOS, Raspberry pi)
+* Select Your OS version(Ubuntu, Windows, MacOS, Raspberry pi)
 * Download KneronPLUS-1.3.0-py3-none-any_{your_os}.whl
 * unzip downloaded `KneronPLUS-1.3.0-py3-none-any.whl.zip`
 * pip install KneronPLUS-1.3.0-py3-none-any.whl
