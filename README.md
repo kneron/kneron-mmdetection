@@ -36,7 +36,7 @@ N/A
 | YOLOX-s | 640 |   7.6      |   40.5  | [config](https://github.com/open-mmlab/mmdetection/tree/master/configs/yolox/yolox_s_8x8_300e_coco.py)       |[model](https://github.com/kneron/Model_Zoo/blob/main/mmdetection/yolox_s/latest.zip)
 
 ## Installation
-- Please refer to [get_started.md](docs/en/get_started.md) for installation.
+- Please refer to [YOLOX: Step-By-Step, Step 0. Environment](docs_kneron/yolox_step_by_step.md) for installation.
 - Please refer to [Kneron PLUS - Python: Installation](http://doc.kneron.com/docs/#plus_python/introduction/install_dependency/) for the environment setup for Kneron USB accelerator.
 
 ## Getting Started
