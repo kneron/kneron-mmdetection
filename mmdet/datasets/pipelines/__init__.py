@@ -11,11 +11,14 @@ from .loading import (LoadAnnotations, LoadImageFromFile, LoadImageFromWebcam,
                       LoadMultiChannelImageFromFiles, LoadPanopticAnnotations,
                       LoadProposals)
 from .test_time_aug import MultiScaleFlipAug
-from .transforms import (Albu, CutOut, Expand, MinIoURandomCrop, MixUp, Mosaic,
-                         Normalize, Pad, PhotoMetricDistortion, RandomAffine,
-                         RandomCenterCropPad, RandomCrop, RandomFlip,
-                         RandomShift, Resize, SegRescale, YOLOXHSVRandomAug,
-                         Rotate90)
+from .transforms import (Albu, CopyPaste, CutOut, Expand, MinIoURandomCrop,
+                         MixUp, Mosaic, Normalize, Pad, PhotoMetricDistortion,
+                         RandomAffine, RandomCenterCropPad, RandomCrop,
+                         RandomFlip, RandomShift, Resize, SegRescale,
+                         YOLOXHSVRandomAug)
+
+# Kneron Modified Pipeline(s)
+from .transforms import Rotate90  # noqa: F401
 
 __all__ = [
     'Compose', 'to_tensor', 'ToTensor', 'ImageToTensor', 'ToDataContainer',
@@ -27,5 +30,8 @@ __all__ = [
     'InstaBoost', 'RandomCenterCropPad', 'AutoAugment', 'CutOut', 'Shear',
     'Rotate', 'ColorTransform', 'EqualizeTransform', 'BrightnessTransform',
     'ContrastTransform', 'Translate', 'RandomShift', 'Mosaic', 'MixUp',
-    'RandomAffine', 'YOLOXHSVRandomAug', 'Rotate90',
+    'RandomAffine', 'YOLOXHSVRandomAug', 'CopyPaste'
 ]
+
+# Kneron Modified Pipeline(s)
+__all__.extend(['Rotate90'])
