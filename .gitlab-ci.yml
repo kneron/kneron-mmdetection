@@ -1,0 +1,7 @@
+stages:
+  - linting
+
+lint:
+  stage: linting
+  script:
+    - flake8
