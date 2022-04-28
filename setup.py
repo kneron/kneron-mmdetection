@@ -194,7 +194,7 @@ if __name__ == '__main__':
         long_description=readme(),
         long_description_content_type='text/markdown',
         author='Kneron Corporation',
-        author_email='',
+        author_email='info@kneron.us',
         keywords='computer vision, object detection',
         url='https://github.com/kneron/kneron-mmdetection',
         packages=find_packages(exclude=('configs', 'tools', 'demo')),
