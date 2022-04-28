@@ -18,9 +18,12 @@ build:
 mmdet-test:
   stage: test
   script:
-    - python -m coverage run --branch --source mmdet -m pytest tests/
-    - python -m coverage xml
-    - python -m coverage report -m
+    - python -m pytest tests --cov-report=html --cov=mmdet
+  coverage: '/TOTAL.*\s([.\d]+)%/'
+  artifacts:
+    paths:
+      - htmlcov/
+    expire_in: 30 days
 
 kneron-test:
   stage: test
