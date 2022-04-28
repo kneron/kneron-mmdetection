@@ -1,28 +1,28 @@
 stages:
-  - lint
+  - init
   - test
 
-linting:
-  stage: lint
+lint:
+  stage: init
   script:
     - flake8
     - interrogate -v --ignore-init-method --ignore-module --ignore-nested-functions --ignore-regex "__repr__" --fail-under 50 mmdet
 
 
-building:
-  stage: test
+build:
+  stage: init
   script:
     - python setup.py check -m -s
     - python -m pip install -e .
 
-mmdet-testing:
+mmdet-test:
   stage: test
   script:
     - python -m coverage run --branch --source mmdet -m pytest tests/
     - python -m coverage xml
     - python -m coverage report -m
 
-kneron-testing:
+kneron-test:
   stage: test
   script:
     - echo "[WIP] This job test kneron-related functions."
