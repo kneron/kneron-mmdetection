@@ -15,17 +15,15 @@ build:
     - python setup.py check -m -s
     - python -m pip install -e .
 
-mmdet-test:
+unit-test:
   stage: test
   script:
-    - python -m pytest tests --cov-report=html --cov=mmdet
+    - python -m coverage run --branch --source mmseg -m pytest tests/
+    - python -m coverage xml
+    - python -m coverage report -m
   coverage: '/TOTAL.*\s([.\d]+)%/'
-  artifacts:
-    paths:
-      - htmlcov/
-    expire_in: 30 days
 
-kneron-test:
+integration-test:
   stage: test
   script:
-    - echo "[WIP] This job test kneron-related functions."
+    - echo "[WIP] This job examines integration tests (typically Kneron's)."
