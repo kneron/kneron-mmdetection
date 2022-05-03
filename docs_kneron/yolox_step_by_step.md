@@ -318,14 +318,24 @@ Recommend you read [Kneron PLUS official document](http://doc.kneron.com/docs/#p
 
 ### Step 7-1: Download and Install PLUS python library(.whl)
 * Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
-* Scroll down to OpenMMLab Kneron Edition table
-* Select Kneron Plus v1.13.0 (pre-built python library)
+* Scroll down to `OpenMMLab Kneron Edition table`
+* Select `Kneron Plus v1.3.0 (pre-built python library, firmware)`
+* Select `python library`
 * Select Your OS version(Ubuntu, Windows, MacOS, Raspberry pi)
-* Download KneronPLUS-1.3.0-py3-none-any_{your_os}.whl
+* Download `KneronPLUS-1.3.0-py3-none-any_{your_os}.whl`
 * unzip downloaded `KneronPLUS-1.3.0-py3-none-any.whl.zip`
 * pip install KneronPLUS-1.3.0-py3-none-any.whl
 
-### Step 7-2: Download YoloX example code
+### Step 7-2: Download and upgrade KL720 USB accelerator firmware
+* Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
+* Scroll down to `OpenMMLab Kneron Edition table`
+* Select `Kneron Plus v1.3.0 (pre-built python library, firmware)`
+* Select `firmware`
+* Download `kl720_frimware.zip (fw_ncpu.bin、fw_scpu.bin)`
+* unzip downloaded `kl720_frimware.zip`
+* upgrade KL720 USB accelerator firmware(fw_ncpu.bin、fw_scpu.bin) by following [document](http://doc.kneron.com/docs/#plus_python/getting_start/), `Sec. 2. Update AI Device to KDP2 Firmware`, `Sec. 2.2 KL720`
+
+### Step 7-3: Download YoloX example code
 * Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
 * Scroll down to OpenMMLab Kneron Edition table
 * Select kneron-mmdetection
