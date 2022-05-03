@@ -1,4 +1,4 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 import os
@@ -30,7 +30,10 @@ def parse_args():
         '--work-dir',
         help='the directory to save the file containing evaluation metrics')
     parser.add_argument('--out', help='output result file in pickle format')
-    parser.add_argument('--out-kneron', help='output result file for kneron public field json file')
+    parser.add_argument(
+        '--out-kneron',
+        help='output result file for kneron public field json file'
+    )
     parser.add_argument(
         '--fuse-conv-bn',
         action='store_true',
@@ -213,11 +216,13 @@ def main():
     if os.path.splitext(args.checkpoint)[-1] == '.pth':
         if fp16_cfg is not None:
             wrap_fp16_model(model)
-        checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+        checkpoint = load_checkpoint(
+            model, args.checkpoint, map_location='cpu'
+        )
         if args.fuse_conv_bn:
             model = fuse_conv_bn(model)
-        # old versions did not save class info in checkpoints, this walkaround is
-        # for backward compatibility
+        # old versions did not save class info in checkpoints,
+        # this workaround is for backward compatibility
         if 'CLASSES' in checkpoint.get('meta', {}):
             model.CLASSES = checkpoint['meta']['CLASSES']
         else:
@@ -225,21 +230,24 @@ def main():
     elif os.path.splitext(args.checkpoint)[-1] == '.onnx':
         import onnxruntime
         onnx_sess = onnxruntime.InferenceSession(args.checkpoint)
-        setattr(model, '__Kn_ONNX_Sess__' , onnx_sess)
+        setattr(model, '__Kn_ONNX_Sess__', onnx_sess)
         model.forward = model.forward_kneron
     elif os.path.splitext(args.checkpoint)[-1] == '.nef':
         try:
             import kp
-        except:
-            warnings.warn('Kneron PLUS software failed to import, see'
-                                    'the document(http://doc.kneron.com/docs/#plus_python/) for the installation guide')
+        except Exception:
+            warnings.warn(
+                'Kneron PLUS software failed to import; please check document '
+                'http://doc.kneron.com/docs/#plus_python '
+                'for installation guide')
 
         # Use first scaned kneron usb dongle
         device_group = kp.core.connect_devices(usb_port_ids=[0])
 
         # Load model
-        model_nef_descriptor = kp.core.load_model_from_file(device_group=device_group,
-                                                                    file_path=args.checkpoint)
+        model_nef_descriptor = kp.core.load_model_from_file(
+            device_group=device_group, file_path=args.checkpoint
+        )
 
         # Generate preprocess setting for PLUS
         generic_raw_image_header = kp.GenericRawImageHeader(
@@ -250,11 +258,11 @@ def main():
             inference_number=0
         )
         kp_params = {
-            'device_group' : device_group,
+            'device_group': device_group,
             'model_nef_descriptor': model_nef_descriptor,
             'generic_raw_image_header': generic_raw_image_header
         }
-        setattr(model, '__Kn_PLUS_Params__' , kp_params)
+        setattr(model, '__Kn_PLUS_Params__', kp_params)
         model.forward = model.forward_kneron
 
     if not distributed:

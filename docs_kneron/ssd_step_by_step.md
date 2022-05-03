@@ -31,8 +31,8 @@ If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
 2. Clone the Kneron-version MMDetection (kneron-mmdetection) repository.
 
     ```bash
-    git clone https://github.com/kneron/kneron-mmdetection
-    cd kneron-mmdetection
+    git clone https://github.com/kneron/AI_Training_mmDetection.git
+    cd AI_Training_mmDetection
     ```
 
 3. Install required python packages for building kneron-mmdetection and then install kneron-mmdetection.
@@ -50,7 +50,7 @@ MMDetection provides hundreds of detection models in [Model Zoo](https://mmdetec
 - Evaluate existing trained models on standard datasets.
 - Train models on standard datasets.
 
-## Train FCOS on COCO detection dataset
+## Train SSD on COCO detection dataset
 
 MMDetection provides out-of-the-box tools for training detection models.
 This section will show how to train models (under [configs](https://github.com/open-mmlab/mmdetection/tree/master/configs)) on COCO.
@@ -80,30 +80,20 @@ mmdetection
 It's recommended to *symlink* the dataset folder to mmdetection folder. However, if you place your dataset folder at different place and do not want to symlink, you have to change the corresponding paths in config files (absolute path is recommended).
 
 
-### Step 1-2: Put pretrained resnet50
 
-```bash
-mkdir pretrained
-cd work_dirs
-wget https://github.com/kneron/Model_Zoo/raw/main/mmdetection/fcos/latest.zip
-unzip latest.zip
-mv pretrained_resnet50/resnet50.pth .
-cd ..
-```
+### Step 1-2: Train SSD on COCO
 
-### Step 1-3: Train FCOS on COCO
+[SSD: Single Shot MultiBox Detector](https://arxiv.org/abs/1512.02325)
 
-[FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355)
-
-We only need the configuration file (which is provided in `configs/fcos`) to train FCOS: 
+We only need the configuration file (which is provided in `configs/ssd`) to train SSD: 
 ```python
-python tools/train.py configs/fcos/fcos_r50_caffe_fpn_gn-head_mstrain_640-800_2x_coco_mm_img_norm.py 
+python tools/train.py configs/ssd/ssdlite_mobilenetv2_scratch_600e_coco_img_norm.py 
 ```
 * (Note 2) The whole training process might take several days, depending on your computational resource (number of GPUs, etc). If you just want to take a quick look at the deployment flow, we suggest that you download our trained model so you can skip the training process:
 ```bash
 mkdir work_dirs
 cd work_dirs
-wget https://github.com/kneron/Model_Zoo/raw/main/mmdetection/fcos/latest.zip
+wget https://github.com/kneron/Model_Zoo/raw/main/mmdetection/ssd/latest.zip
 unzip latest.zip
 cd ..
 ```
@@ -114,31 +104,31 @@ cd ..
 
 ```python
 python tools/test_kneron.py \
-    configs/fcos/fcos_r50_caffe_fpn_gn-head_mstrain_640-800_2x_coco_mm_img_norm.py \
+    configs/ssd/ssdlite_mobilenetv2_scratch_600e_coco_img_norm.py \
     work_dirs/latest.pth \
     --eval bbox \
     --out-kneron output.json
 ```
-* `configs/fcos/fcos_r50_caffe_fpn_gn-head_mstrain_640-800_2x_coco_mm_img_norm.py` is your fcos training config
+* `configs/ssd/ssdlite_mobilenetv2_scratch_600e_coco_img_norm.py` is your ssd training config
 * `work_dirs/latest.pth` is your trained focs model
 
 The expected result of the command above will be something similar to the following text (the numbers may slightly differ):
 ```plain
 ...
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.386
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=1000 ] = 0.581
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=1000 ] = 0.411
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.229
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.423
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.483
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.550
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=300 ] = 0.550
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=1000 ] = 0.550
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.354
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.594
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.701
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.204
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=1000 ] = 0.343
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=1000 ] = 0.208
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.017
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.193
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.399
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.315
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=300 ] = 0.315
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=1000 ] = 0.315
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.046
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.333
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.579
 
-OrderedDict([('bbox_mAP', 0.386), ('bbox_mAP_50', 0.581), ('bbox_mAP_75', 0.411), ('bbox_mAP_s', 0.229), ('bbox_mAP_m', 0.423), ('bbox_mAP_l', 0.483), ('bbox_mAP_copypaste', '0.386 0.581 0.411 0.229 0.423 0.483')])
+OrderedDict([('bbox_mAP', 0.204), ('bbox_mAP_50', 0.343), ('bbox_mAP_75', 0.208), ('bbox_mAP_s', 0.017), ('bbox_mAP_m', 0.193), ('bbox_mAP_l', 0.399), ('bbox_mAP_copypaste', '0.204 0.343 0.208 0.017 0.193 0.399')])
 
 ...
 ```
@@ -147,14 +137,14 @@ OrderedDict([('bbox_mAP', 0.386), ('bbox_mAP_50', 0.581), ('bbox_mAP_75', 0.411)
 `tools/deployment/pytorch2onnx_kneron.py` is a script provided by Kneron to help user to convert our trained pth model to kneron-optimized onnx:
 ```python
 python tools/deployment/pytorch2onnx_kneron.py \
-    configs/fcos/fcos_r50_caffe_fpn_gn-head_mstrain_640-800_2x_coco_mm_img_norm.py \
-    work_dirs/fcos_r50_caffe_fpn_gn-head_mstrain_640-800_2x_coco_mm_img_norm/latest.pth \
+    configs/ssd/ssdlite_mobilenetv2_scratch_600e_coco_img_norm.py \
+    work_dirs/ssdlite_mobilenetv2_scratch_600e_coco_img_norm/latest.pth \
     --output-file work_dirs/latest.onnx \
     --skip-postprocess \
     --shape 640 640
 ```
-* `configs/fcos/fcos_r50_caffe_fpn_gn-head_mstrain_640-800_2x_coco_mm_img_norm.py` is your fcos training config
-* `work_dirs/latest.pth` is your trained fcos model
+* `configs/ssd/ssdlite_mobilenetv2_scratch_600e_coco_img_norm.py` is your ssd training config
+* `work_dirs/latest.pth` is your trained ssd model
 
 The output onnx should be the same name as `work_dirs/latest.pth` with `.onnx` postfix in the same folder.
 
@@ -163,31 +153,32 @@ We use the same script(`tools/test_kneron.py`) in step 2 to test our exported on
 
 ```python
 python tools/test_kneron.py \
-    configs/fcos/fcos_r50_caffe_fpn_gn-head_mstrain_640-800_2x_coco_mm_img_norm.py \
+    configs/ssd/ssdlite_mobilenetv2_scratch_600e_coco_img_norm.py \
     work_dirs/latest.onnx \
     --eval bbox \
     --out-kneron output.json
 ```
-* `configs/fcos/fcos_r50_caffe_fpn_gn-head_mstrain_640-800_2x_coco_mm_img_norm.py` is your fcos training config
-* `work_dirs/latest.onnx` is your exported fcos onnx model
+* `configs/ssd/ssdlite_mobilenetv2_scratch_600e_coco_img_norm.py` is your ssd training config
+* `work_dirs/latest.onnx` is your exported ssd onnx model
 
 The expected result of the command above will be something similar to the following text (the numbers may slightly differ):
 ```plain
 ...
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.386
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=1000 ] = 0.581
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=1000 ] = 0.411
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.229
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.423
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.483
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.550
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=300 ] = 0.550
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=1000 ] = 0.550
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.354
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.594
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.701
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.204
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=1000 ] = 0.343
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=1000 ] = 0.208
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.017
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.193
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.399
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.315
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=300 ] = 0.315
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=1000 ] = 0.315
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=1000 ] = 0.046
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=1000 ] = 0.333
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=1000 ] = 0.579
 
-OrderedDict([('bbox_mAP', 0.386), ('bbox_mAP_50', 0.581), ('bbox_mAP_75', 0.411), ('bbox_mAP_s', 0.229), ('bbox_mAP_m', 0.423), ('bbox_mAP_l', 0.483), ('bbox_mAP_copypaste', '0.386 0.581 0.411 0.229 0.423 0.483')])
+OrderedDict([('bbox_mAP', 0.204), ('bbox_mAP_50', 0.343), ('bbox_mAP_75', 0.208), ('bbox_mAP_s', 0.017), ('bbox_mAP_m', 0.193), ('bbox_mAP_l', 0.399), ('bbox_mAP_copypaste', '0.204 0.343 0.208 0.017 0.193 0.399')])
+
 ...
 ```
 

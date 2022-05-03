@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
 import os.path as osp
@@ -189,13 +189,14 @@ if __name__ == '__main__':
     setup(
         name='mmdet',
         version=get_version(),
-        description='OpenMMLab Detection Toolbox and Benchmark (Kneron Edition)',
+        description='OpenMMLab Detection Toolbox and Benchmark '
+                    '(Kneron Edition)',
         long_description=readme(),
         long_description_content_type='text/markdown',
         author='Kneron Corporation',
         author_email='',
         keywords='computer vision, object detection',
-        url='https://github.com/kneron/MMDetectionKN',
+        url='https://github.com/kneron/kneron-mmdetection',
         packages=find_packages(exclude=('configs', 'tools', 'demo')),
         include_package_data=True,
         classifiers=[

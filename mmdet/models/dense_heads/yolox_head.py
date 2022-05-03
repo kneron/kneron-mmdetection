@@ -1,4 +1,4 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
 
@@ -490,12 +490,13 @@ class YOLOXHead(BaseDenseHead, BBoxTestMixin):
         l1_target[:, 2:] = torch.log(gt_cxcywh[:, 2:] / priors[:, 2:] + eps)
         return l1_target
 
-    def get_bboxes_kn(self,
-                   node_outputs,  # should be list of numpy array
-                   img_metas=None,
-                   cfg=None,
-                   rescale=False,
-                   with_nms=True):
+    def get_bboxes_kn(
+            self,
+            node_outputs,  # should be list of numpy array
+            img_metas=None,
+            cfg=None,
+            rescale=False,
+            with_nms=True):
 
         cls_scores = [node_outputs[0], node_outputs[1], node_outputs[2]]
         bbox_preds = [node_outputs[3], node_outputs[4], node_outputs[5]]

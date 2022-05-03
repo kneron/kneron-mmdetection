@@ -1,4 +1,4 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 
@@ -48,10 +48,10 @@ def init_detector(config, checkpoint=None, device='cuda:0', cfg_options=None):
             warnings.warn('Class names are not saved in the checkpoint\'s '
                           'meta data, use COCO classes by default.')
             model.CLASSES = get_classes('coco')
-    else:  
+    else:
         try:
-            model.CLASSES = get_classes(config['dataset_type'].lower()[:-7]) 
-        except Exception as e:
+            model.CLASSES = get_classes(config['dataset_type'].lower()[:-7])
+        except Exception:
             warnings.warn('Use default classes name')
             model.CLASSES = None
     model.cfg = config  # save the config in the model for convenience
@@ -158,18 +158,25 @@ def inference_detector(model, imgs):
     else:
         return results
 
-def set_kn_param_to_model_for_kn_inference_mode(model, onnx_model_sess = None, kneron_plus_params = None):
+
+def set_kn_param_to_model_for_kn_inference_mode(model,
+                                                onnx_model_sess=None,
+                                                kneron_plus_params=None):
     if hasattr(model, '__Kn_ONNX_Sess__'):
         delattr(model, '__Kn_ONNX_Sess__')
     if hasattr(model, '__Kn_PLUS_Params__'):
         delattr(model, '__Kn_PLUS_Params__')
 
-    if onnx_model_sess != None:
-        setattr(model, '__Kn_ONNX_Sess__' , onnx_model_sess)
-    elif kneron_plus_params != None:
-        setattr(model, '__Kn_PLUS_Params__' , kneron_plus_params)
+    if onnx_model_sess is not None:
+        setattr(model, '__Kn_ONNX_Sess__', onnx_model_sess)
+    elif kneron_plus_params is not None:
+        setattr(model, '__Kn_PLUS_Params__', kneron_plus_params)
 
-def inference_detector_kn(model, imgs, onnx_model_sess = None, kneron_plus_params = None):
+
+def inference_detector_kn(model,
+                          imgs,
+                          onnx_model_sess=None,
+                          kneron_plus_params=None):
     """Inference image(s) with the detector.
 
     Args:
@@ -199,13 +206,17 @@ def inference_detector_kn(model, imgs, onnx_model_sess = None, kneron_plus_param
     cfg.data.test.pipeline = replace_ImageToTensor(cfg.data.test.pipeline)
     test_pipeline = Compose(cfg.data.test.pipeline)
 
-    assert hasattr(model, 'forward_kneron'), 'Error: None implemented kneron forward type!'
+    assert hasattr(
+        model,
+        'forward_kneron'), 'Error: None implemented kneron forward type!'
 
-    if onnx_model_sess != None:
-        set_kn_param_to_model_for_kn_inference_mode(model, onnx_model_sess = onnx_model_sess)
-    elif kneron_plus_params != None:
-        set_kn_param_to_model_for_kn_inference_mode(model, kneron_plus_params = kneron_plus_params)
-        
+    if onnx_model_sess is not None:
+        set_kn_param_to_model_for_kn_inference_mode(
+            model, onnx_model_sess=onnx_model_sess)
+    elif kneron_plus_params is not None:
+        set_kn_param_to_model_for_kn_inference_mode(
+            model, kneron_plus_params=kneron_plus_params)
+
     model.forward = model.forward_kneron
 
     datas = []
@@ -243,6 +254,7 @@ def inference_detector_kn(model, imgs, onnx_model_sess = None, kneron_plus_param
         return results[0]
     else:
         return results
+
 
 async def async_inference_detector(model, imgs):
     """Async inference image(s) with the detector.

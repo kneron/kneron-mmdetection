@@ -1,4 +1,4 @@
-# All modification made by Kneron Corporation: Copyright (c) 2022 Kneron Corporation
+# All modification made by Kneron Corp.: Copyright (c) 2022 Kneron Corp.
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 
@@ -17,7 +17,7 @@ INF = 1e8
 
 
 @HEADS.register_module()
-class FCOS_IndividualHead(AnchorFreeHead):
+class FCOSIndividualHead(AnchorFreeHead):
     """Anchor-free head used in `FCOS <https://arxiv.org/abs/1904.01355>`_.
 
     The FCOS head does not use anchor boxes. Instead bounding boxes are
@@ -65,8 +65,7 @@ class FCOS_IndividualHead(AnchorFreeHead):
                  in_channels,
                  cls_kernel=3,
                  reg_kernel=3,
-                #  regress_ranges=((-1, 64), (64, 128), (128, 256), (256, 512), (512, INF)), # assert len(points) == len(self.regress_ranges)
-                 regress_ranges=((-1, 128), (128, 256), (256, INF)), # assert len(points) == len(self.regress_ranges)
+                 regress_ranges=((-1, 128), (128, 256), (256, INF)),
                  center_sampling=False,
                  center_sample_radius=1.5,
                  norm_on_bbox=False,
@@ -82,7 +81,6 @@ class FCOS_IndividualHead(AnchorFreeHead):
                      type='CrossEntropyLoss',
                      use_sigmoid=True,
                      loss_weight=1.0),
-                #  norm_cfg=dict(type='GN', num_groups=32, requires_grad=True),
                  norm_cfg=dict(type='BN', requires_grad=True),
                  init_cfg=dict(
                      type='Normal',
@@ -118,13 +116,12 @@ class FCOS_IndividualHead(AnchorFreeHead):
         self._init_cls_convs()
         self._init_reg_convs()
         self._init_predictor()
-        
         self.scales = nn.ModuleList([Scale(1.0) for _ in self.strides])
 
     def _init_cls_convs(self):
         """Initialize classification conv layers of the head."""
-        self.cls_convs = nn.ModuleList()       
-        for i in range(len(self.in_channels)):           
+        self.cls_convs = nn.ModuleList()
+        for i in range(len(self.in_channels)):
             chn = self.in_channels[i]
             conv_cfg = self.conv_cfg
             self.cls_convs.append(
@@ -149,14 +146,12 @@ class FCOS_IndividualHead(AnchorFreeHead):
                     act_cfg=dict(type='LeakyReLU', negative_slope=0.1),
                     norm_cfg=self.norm_cfg,
                     bias=self.conv_bias))
-        # print('self.extra_head',self.extra_head)
-        # print('self.cls_convs',self.cls_convs)
-        
+
     def _init_reg_convs(self):
         """Initialize bbox regression conv layers of the head."""
         self.reg_convs = nn.ModuleList()
         for i in range(len(self.in_channels)):
-            chn = self.in_channels[i] 
+            chn = self.in_channels[i]
             conv_cfg = self.conv_cfg
             self.reg_convs.append(
                 ConvModule(
@@ -168,20 +163,28 @@ class FCOS_IndividualHead(AnchorFreeHead):
                     conv_cfg=conv_cfg,
                     norm_cfg=self.norm_cfg,
                     bias=self.conv_bias))
-        # print('self.reg_convs',self.reg_convs)
-        
+
     def _init_predictor(self):
         """Initialize predictor layers of the head."""
         self.conv_cls = nn.ModuleList()
         self.conv_reg = nn.ModuleList()
         self.conv_centerness = nn.ModuleList()
-        
+
         for i in range(len(self.in_channels)):
-            self.conv_cls.append(nn.Conv2d(self.feat_channels[i], self.cls_out_channels, 3, padding=1))
-            self.conv_reg.append(nn.Conv2d(self.feat_channels[i], 4, 3, padding=1))
-            self.conv_centerness.append(nn.Conv2d(self.feat_channels[i], 1, 3, padding=1))
-        # print('self.conv_cls',self.conv_cls)
-        # print('self.conv_reg',self.conv_reg)
+            self.conv_cls.append(
+                nn.Conv2d(
+                    self.feat_channels[i],
+                    self.cls_out_channels,
+                    3,
+                    padding=1
+                )
+            )
+            self.conv_reg.append(
+                nn.Conv2d(self.feat_channels[i], 4, 3, padding=1)
+            )
+            self.conv_centerness.append(
+                nn.Conv2d(self.feat_channels[i], 1, 3, padding=1)
+            )
 
     def forward(self, feats):
         """Forward features from the upstream network.
@@ -201,11 +204,11 @@ class FCOS_IndividualHead(AnchorFreeHead):
                 centernesses (list[Tensor]): centerness for each scale level, \
                     each is a 4D-tensor, the channel number is num_points * 1.
         """
-        # return multi_apply(self.forward_single, feats, self.scales, self.strides)
-        out = [[],[],[]]
+        out = [[], [], []]
         for i in range(len(feats)):
             x, scale, stride = feats[i], self.scales[i], self.strides[i]
-            if i==2:
+
+            if i == 2:
                 x = self.extra_head[0](x)
 
             cls_feat = x
@@ -216,7 +219,7 @@ class FCOS_IndividualHead(AnchorFreeHead):
 
             reg_feat = self.reg_convs[i](reg_feat)
             bbox_pred = self.conv_reg[i](reg_feat)
-            
+
             if self.centerness_on_reg:
                 centerness = self.conv_centerness[i](reg_feat)
             else:
@@ -230,14 +233,13 @@ class FCOS_IndividualHead(AnchorFreeHead):
                     bbox_pred *= stride
             else:
                 bbox_pred = bbox_pred.exp()
-            # return cls_score, bbox_pred, centerness
-            
+
             out[0].append(cls_score)
             out[1].append(bbox_pred)
             out[2].append(centerness)
         out = tuple(out)
         return out
-    
+
     def forward_single(self, x, scale, stride):
         """Forward features of a single scale level.
 

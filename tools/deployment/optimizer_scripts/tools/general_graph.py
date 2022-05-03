@@ -1,9 +1,11 @@
 from collections import deque
 
+
 class Node:
     """A Node which maps a node proto. It has pointers to its parents and
     children.
     """
+
     def __init__(self, onnx_node):
         """Initialize a node. This initialization only set up the mapping to
         node proto. The pointers should be set up by outside.
@@ -17,12 +19,12 @@ class Node:
             self.name = onnx_node.name
             self.proto = onnx_node
 
+
 class Graph:
-    """A graph which is constructed from the onnx proto.
-    """
+    """A graph which is constructed from the onnx proto."""
+
     def __init__(self, onnx_graph):
-        """Construct the graph from onnx.
-        """
+        """Construct the graph from onnx."""
         self.input_nodes = []
         self.output_nodes = []
         self.name2node = {}
@@ -51,9 +53,9 @@ class Graph:
         for value in onnx_graph.value_info:
             node = self.output2node[value.name]
             node.output_value = value
+
     def get_sorted_node_list(self):
-        """Return a node list in topological order.
-        """
+        """Return a node list in topological order."""
         visited = set()
         todo = deque()
         result = []
