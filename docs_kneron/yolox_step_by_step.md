@@ -40,6 +40,7 @@ If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
     ```shell
     pip install -r requirements/build.txt
     pip install -v -e .  # or "python setup.py develop"
+    pip install onnx onnxoptimizer onnx-simplifier
     ```
 
 # Step 1: Train models on standard datasets 
