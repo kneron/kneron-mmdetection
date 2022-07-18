@@ -1,29 +1,114 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+
 stages:
-  - init
+  - lint
+  - build
   - test
 
 lint:
-  stage: init
+  stage: lint
+  image: kneron/openmmlab-lint
   script:
     - flake8
     - interrogate -v --ignore-init-method --ignore-module --ignore-nested-functions --ignore-regex "__repr__" --fail-under 50 mmdet
 
-
-build:
-  stage: init
+.build:
+  stage: build
+  image: kneron/openmmlab-build-mmdet-py${BUILD_PY}-tch${BUILD_TCH}
   script:
     - python setup.py check -m -s
-    - python -m pip install -e .
+    - python setup.py bdist_wheel
+  artifacts:
+    paths:
+      - dist/*.whl
 
-unit-test:
+.unit-test:
   stage: test
+  image: kneron/openmmlab-build-mmdet-py${BUILD_PY}-tch${BUILD_TCH}
   script:
-    - python -m coverage run --branch --source mmseg -m pytest tests/
+    - python -m pip install dist/*.whl
+    - python -m coverage run --branch --source mmdet -m pytest tests/
     - python -m coverage xml
     - python -m coverage report -m
   coverage: '/TOTAL.*\s([.\d]+)%/'
+  timeout: 2h 30m
 
-integration-test:
-  stage: test
-  script:
-    - echo "[WIP] This job examines integration tests (typically Kneron's)."
+build:py-3.8.13:tch-1.9.1:
+  extends: .build
+  variables:
+    BUILD_PY: 3.8.13
+    BUILD_TCH: 1.9.1
+
+unit-test:py-3.8.13:tch-1.9.1:
+  extends: .unit-test
+  needs: ["build:py-3.8.13:tch-1.9.1"]
+  variables:
+    BUILD_PY: 3.8.13
+    BUILD_TCH: 1.9.1
+
+build:py-3.8.13:tch-1.10.2:
+  extends: .build
+  variables:
+    BUILD_PY: 3.8.13
+    BUILD_TCH: 1.10.2
+
+unit-test:py-3.8.13:tch-1.10.2:
+  extends: .unit-test
+  needs: ["build:py-3.8.13:tch-1.10.2"]
+  variables:
+    BUILD_PY: 3.8.13
+    BUILD_TCH: 1.10.2
+
+build:py-3.8.13:tch-1.11.0:
+  extends: .build
+  variables:
+    BUILD_PY: 3.8.13
+    BUILD_TCH: 1.11.0
+
+unit-test:py-3.8.13:tch-1.11.0:
+  extends: .unit-test
+  needs: ["build:py-3.8.13:tch-1.11.0"]
+  variables:
+    BUILD_PY: 3.8.13
+    BUILD_TCH: 1.11.0
+
+build:py-3.9.12:tch-1.9.1:
+  extends: .build
+  variables:
+    BUILD_PY: 3.9.12
+    BUILD_TCH: 1.9.1
+
+unit-test:py-3.9.12:tch-1.9.1:
+  extends: .unit-test
+  needs: ["build:py-3.9.12:tch-1.9.1"]
+  variables:
+    BUILD_PY: 3.9.12
+    BUILD_TCH: 1.9.1
+
+build:py-3.9.12:tch-1.10.2:
+  extends: .build
+  variables:
+    BUILD_PY: 3.9.12
+    BUILD_TCH: 1.10.2
+
+unit-test:py-3.9.12:tch-1.10.2:
+  extends: .unit-test
+  needs: ["build:py-3.9.12:tch-1.10.2"]
+  variables:
+    BUILD_PY: 3.9.12
+    BUILD_TCH: 1.10.2
+
+build:py-3.9.12:tch-1.11.0:
+  extends: .build
+  variables:
+    BUILD_PY: 3.9.12
+    BUILD_TCH: 1.11.0
+
+unit-test:py-3.9.12:tch-1.11.0:
+  extends: .unit-test
+  needs: ["build:py-3.9.12:tch-1.11.0"]
+  variables:
+    BUILD_PY: 3.9.12
+    BUILD_TCH: 1.11.0

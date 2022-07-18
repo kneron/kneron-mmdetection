@@ -7,24 +7,32 @@ from .compose import Compose
 from .formatting import (Collect, DefaultFormatBundle, ImageToTensor,
                          ToDataContainer, ToTensor, Transpose, to_tensor)
 from .instaboost import InstaBoost
-from .loading import (LoadAnnotations, LoadImageFromFile, LoadImageFromWebcam,
-                      LoadMultiChannelImageFromFiles, LoadProposals)
+from .loading import (FilterAnnotations, LoadAnnotations, LoadImageFromFile,
+                      LoadImageFromWebcam, LoadMultiChannelImageFromFiles,
+                      LoadPanopticAnnotations, LoadProposals)
 from .test_time_aug import MultiScaleFlipAug
-from .transforms import (Albu, CutOut, Expand, MinIoURandomCrop, MixUp, Mosaic,
-                         Normalize, Pad, PhotoMetricDistortion, RandomAffine,
-                         RandomCenterCropPad, RandomCrop, RandomFlip,
-                         RandomShift, Resize, SegRescale, YOLOXHSVRandomAug,
-                         Rotate90)
+from .transforms import (Albu, CopyPaste, CutOut, Expand, MinIoURandomCrop,
+                         MixUp, Mosaic, Normalize, Pad, PhotoMetricDistortion,
+                         RandomAffine, RandomCenterCropPad, RandomCrop,
+                         RandomFlip, RandomShift, Resize, SegRescale,
+                         YOLOXHSVRandomAug)
+
+# Kneron Modified Pipeline(s)
+from .transforms import Rotate90  # noqa: F401
 
 __all__ = [
     'Compose', 'to_tensor', 'ToTensor', 'ImageToTensor', 'ToDataContainer',
     'Transpose', 'Collect', 'DefaultFormatBundle', 'LoadAnnotations',
-    'LoadImageFromFile', 'LoadImageFromWebcam',
-    'LoadMultiChannelImageFromFiles', 'LoadProposals', 'MultiScaleFlipAug',
-    'Resize', 'RandomFlip', 'Pad', 'RandomCrop', 'Normalize', 'SegRescale',
-    'MinIoURandomCrop', 'Expand', 'PhotoMetricDistortion', 'Albu',
-    'InstaBoost', 'RandomCenterCropPad', 'AutoAugment', 'CutOut', 'Shear',
-    'Rotate', 'ColorTransform', 'EqualizeTransform', 'BrightnessTransform',
-    'ContrastTransform', 'Translate', 'RandomShift', 'Mosaic', 'MixUp',
-    'RandomAffine', 'YOLOXHSVRandomAug', 'Rotate90',
+    'LoadImageFromFile', 'LoadImageFromWebcam', 'LoadPanopticAnnotations',
+    'LoadMultiChannelImageFromFiles', 'LoadProposals', 'FilterAnnotations',
+    'MultiScaleFlipAug', 'Resize', 'RandomFlip', 'Pad', 'RandomCrop',
+    'Normalize', 'SegRescale', 'MinIoURandomCrop', 'Expand',
+    'PhotoMetricDistortion', 'Albu', 'InstaBoost', 'RandomCenterCropPad',
+    'AutoAugment', 'CutOut', 'Shear', 'Rotate', 'ColorTransform',
+    'EqualizeTransform', 'BrightnessTransform', 'ContrastTransform',
+    'Translate', 'RandomShift', 'Mosaic', 'MixUp', 'RandomAffine',
+    'YOLOXHSVRandomAug', 'CopyPaste'
 ]
+
+# Kneron Modified Pipeline(s)
+__all__.extend(['Rotate90'])
